@@ -39,16 +39,19 @@
     <item row="1" column="1">
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
-       <number>20</number>
+       <number>10</number>
       </property>
       <property name="leftMargin">
        <number>50</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
       </property>
       <property name="rightMargin">
        <number>50</number>
       </property>
       <property name="bottomMargin">
-       <number>500</number>
+       <number>20</number>
       </property>
       <item>
        <widget class="QPushButton" name="pushButton">
@@ -172,6 +175,11 @@
           <string>CH70</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>ALL</string>
+         </property>
+        </item>
        </widget>
       </item>
       <item>
@@ -254,6 +262,50 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>200</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>300</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+          <pointsize>9</pointsize>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(188, 188, 188);
+</string>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Raised</enum>
+        </property>
+        <property name="lineWidth">
+         <number>1</number>
+        </property>
+        <property name="midLineWidth">
+         <number>0</number>
+        </property>
+        <property name="text">
+         <string>Last sent message:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item row="1" column="0" alignment="Qt::AlignHCenter">
@@ -261,13 +313,13 @@
       <property name="minimumSize">
        <size>
         <width>1000</width>
-        <height>0</height>
+        <height>200</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>16777215</width>
-        <height>1500</height>
+        <width>1000</width>
+        <height>1200</height>
        </size>
       </property>
       <property name="font">
@@ -277,6 +329,9 @@
       </property>
       <property name="autoFillBackground">
        <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(230, 230, 230); margin-left: 20px;</string>
       </property>
       <property name="frameShape">
        <enum>QFrame::Box</enum>

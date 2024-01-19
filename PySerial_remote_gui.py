@@ -10,6 +10,7 @@ serialPort = serial.Serial(
 )
 
 root = tk.Tk()
+root.title("Remote Controll LED Poi Sticks")
 
 
 # Channels: 20 30 40 50 60 70
