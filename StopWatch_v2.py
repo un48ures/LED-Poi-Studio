@@ -21,8 +21,9 @@ serialPort = serial.Serial(
 
 receiver_ids = [1, 2, 3, 4, 5, 6]
 mode = 2 #Picture Mode
-saturation = 0
-velocity = 0
+brightness = 2 #set global brightness
+saturation = 0 #some not used default values
+velocity = 0 #some not used default values
 
 
 class MarkerList:
@@ -141,7 +142,6 @@ class MyGUI(QMainWindow):
                 print("Music Play")
 
     def send_marker(self):
-        brightness = 2
         while self.running:
             current_time_ms = int(mixer.music.get_pos())  # current Time
             #print(f"current time {current_time_ms}")
@@ -253,9 +253,6 @@ class Arduino:
         serialPort.write(chr(byte4).encode('latin_1'))
         serialPort.write(chr(byte5).encode('latin_1'))
         serialPort.write(chr(byte6).encode('latin_1'))
-
-
-
 
 
 def main():

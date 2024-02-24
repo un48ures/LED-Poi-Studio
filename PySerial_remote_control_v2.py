@@ -47,6 +47,8 @@ def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity)
     serialPort.write(chr(byte4).encode('latin_1'))
     serialPort.write(chr(byte5).encode('latin_1'))
     serialPort.write(chr(byte6).encode('latin_1'))
+    #msg = chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') + chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1')
+    #serialPort.write(msg)
 
     print("byte1 = " + str(byte1) + "(Mode)")
     print("byte2 = " + str(byte2) + "(receiver_id)")
@@ -164,7 +166,7 @@ combo = ttk.Combobox(
 combo.grid(row=8, column=0)
 
 serialPort = serial.Serial(
-    port="COM1", baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
+    port="COM11", baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
 )
 
 # Apply Button COM Port
