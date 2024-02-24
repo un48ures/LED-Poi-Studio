@@ -165,9 +165,15 @@ combo = ttk.Combobox(
 )
 combo.grid(row=8, column=0)
 
-serialPort = serial.Serial(
-    port="COM11", baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
-)
+
+com1 = str(ports[0])
+print(com1.split()[0])
+
+serialPort = serial.Serial(port=com1.split()[0], baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE)
+
+#combo.set(0)
+#selection = combo.get()
+#print(selection)
 
 # Apply Button COM Port
 def apply():
@@ -176,7 +182,6 @@ def apply():
     s1 = selection.split()[0]
     print(s1)
     serialPort.setPort(s1)
-
 
 # Button Apply
 buttonA = tk.Button(root, bg="white", text="Apply", anchor="e", command=apply)
