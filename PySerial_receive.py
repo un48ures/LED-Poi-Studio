@@ -8,7 +8,7 @@ import serial
 import time
 
 serialPort = serial.Serial(
-    port="COM10", baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
+    port="COM11", baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
 )
 
 serialString = ""

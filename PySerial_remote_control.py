@@ -12,13 +12,14 @@ serialPort = serial.Serial(
 root = tk.Tk()
 root.title("Remote Controll LED Poi Sticks")
 
-
 # Channels: 20 30 40 50 60 70
+channel = [10, 20, 30, 40, 50, 60]
 
-def send(channel, pictureNum, brightness):
-    byte1 = int((channel / 10 - 2) + 144)
+
+def send(cha, pictureNum, brightness):
+    byte1 = int((cha / 10 - 2) + 144)
     byte2 = pictureNum
-    byte3 = int((channel / 10 - 2) + 224)
+    byte3 = int((cha / 10 - 2) + 224)
     byte4 = brightness
     byte5 = 0
     serialPort.write(chr(byte1).encode('latin_1'))
@@ -32,20 +33,19 @@ def send(channel, pictureNum, brightness):
     print("byte4 = " + str(byte4))
     print("byte5 = " + str(byte5))
     print("Channel select: " + str(ch_select.get()))
-
-
-channel = [20, 30, 40, 50, 60, 70]
+    #time.sleep(0.1)
 
 
 def send_1():
     if ch_select.get() == -1:  # Select all (-1)
+        send(10, inputvar.get(), bslider.get())
         send(20, inputvar.get(), bslider.get())
         send(30, inputvar.get(), bslider.get())
         send(40, inputvar.get(), bslider.get())
         send(50, inputvar.get(), bslider.get())
         send(60, inputvar.get(), bslider.get())
-        send(70, inputvar.get(), bslider.get())
-        #time.sleep(0.25)
+        # time.sleep(0.25)
+
 
     else:
         send(ch_select.get(), inputvar.get(), bslider.get())  # Select single Channel
@@ -53,12 +53,13 @@ def send_1():
 
 def send_off():
     if ch_select.get() == -1:  # Select all (-1)
+        send(10, 0, 0)
         send(20, 0, 0)
         send(30, 0, 0)
         send(40, 0, 0)
         send(50, 0, 0)
         send(60, 0, 0)
-        send(70, 0, 0)
+
     else:
         send(ch_select.get(), 0, 0)
 
@@ -91,10 +92,10 @@ inputbox.grid(row=2, column=1, sticky="s", padx=20)
 # Radiobuttons Channel
 for ch in channel:
     radiob = tk.Radiobutton(root, text=ch, value=ch, variable=ch_select)
-    radiob.grid(row=int(ch / 10 + 3), column=1)  # row 4 - 9
+    radiob.grid(row=int(ch / 10 + 4), column=1)  # row 4 - 9
 radio_all = tk.Radiobutton(root, text="all", value=-1, variable=ch_select)
-radio_all.grid(row=11, column=1)
-ch_select.set(20)  # setdefault to CH 20
+radio_all.grid(row=12, column=1)
+ch_select.set(10)  # setdefault to CH 20
 
 # Title/Labels
 title = tk.Label(root, bg="yellow", text="Remote Control LED Poi")

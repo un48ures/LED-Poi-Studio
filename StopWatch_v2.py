@@ -19,7 +19,10 @@ serialPort = serial.Serial(
     port="COM11", baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
 )
 
-channels = [20, 30, 40, 50, 60, 70]
+receiver_ids = [1, 2, 3, 4, 5, 6]
+mode = 2 #Picture Mode
+saturation = 0
+velocity = 0
 
 
 class MarkerList:
@@ -41,8 +44,8 @@ class MarkerList:
         self.ListMarkers = backup_details
         self.f.close()
 
-    def add_marker(self, number, time_stamp, channel, picture, send_status):
-        self.ListMarkers.append([number, time_stamp, channel, picture, send_status])
+    def add_marker(self, number, time_stamp, ID, picture, send_status):
+        self.ListMarkers.append([number, time_stamp, ID, picture, send_status])
         self.update_backup_file()
 
     def update_backup_file(self):
@@ -57,7 +60,7 @@ class MarkerList:
         output = ""
         if len(self.ListMarkers) > 0:
             for x in self.ListMarkers:
-                output += f"\nMarker {x[0]} - Time: {x[1]} - Channel {x[2]} - Picture: {x[3]} - Status Sent: {x[4]}"
+                output += f"\nMarker {x[0]} - Time: {x[1]} - ID {x[2]} - Picture: {x[3]} - Status Sent: {x[4]}"
         return output
 
     def delete_last(self):
@@ -159,15 +162,15 @@ class MyGUI(QMainWindow):
                     picture = int(r[3])
 
                     if r[2] != "ALL":
-                        channel = int(r[2][2:])
-                        self.arduino.send(channel, picture, brightness)
+                        ids = r[2]
+                        self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
                         self.label_3.setText(
-                            "Last sent message:\n\n" + f"Channel: {channel}\n" + f"Picture Nr.: {picture}\n" +
+                            "Last sent message:\n\n" + f"Channel: {id}\n" + f"Picture Nr.: {picture}\n" +
                             f"Brightness: {brightness}\n\n")
                     else:
                         # Broadcast to all Channels 20 30 40 50 60 70
-                        for ch in channels:
-                            self.arduino.send(int(ch), picture, brightness)
+                        for ids in receiver_ids:
+                            self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
                         self.label_3.setText(
                             "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
                             f"Brightness: {brightness} \n\n")
@@ -189,8 +192,8 @@ class MyGUI(QMainWindow):
         self.marker_list.reset_send_status_all()
         self.passed = 0
         # Make all LEDs go black
-        for ch in channels:
-            self.arduino.send(int(ch), 0, 0)
+        for ids in receiver_ids:
+            self.arduino.send(mode, ids, 0, saturation, 0, velocity)
         # Update List of Markers on GUI
         self.label_2.setText(self.marker_list.output_list_as_string())
 
@@ -230,22 +233,28 @@ class Arduino:
     def __init__(self):
         self.bytes = [0]
 
-    def send(self, channel, picturenum, brightness):
-        byte1 = int((channel / 10 - 2) + 144)
-        byte2 = picturenum
-        byte3 = int((channel / 10 - 2) + 224)
-        byte4 = brightness
-        byte5 = 0
+    # def send(self, channel, picturenum, brightness):
+    def send(self, mode, receiver_id, picture_hue, saturation, brightness_value, velocity):
+        byte1 = int(mode)
+        byte2 = int(receiver_id)
+        byte3 = int(picture_hue)
+        byte4 = int(saturation)
+        byte5 = int(brightness_value)
+        byte6 = int(velocity)
+        print("byte1 = " + str(byte1) + "(Mode)")
+        print("byte2 = " + str(byte2) + "(receiver_id)")
+        print("byte3 = " + str(byte3) + "(picture/hue)")
+        print("byte4 = " + str(byte4) + "(saturation)")
+        print("byte5 = " + str(byte5) + "(brightness/value)")
+        print("byte6 = " + str(byte6) + "(velocity)")
         serialPort.write(chr(byte1).encode('latin_1'))
         serialPort.write(chr(byte2).encode('latin_1'))
         serialPort.write(chr(byte3).encode('latin_1'))
         serialPort.write(chr(byte4).encode('latin_1'))
         serialPort.write(chr(byte5).encode('latin_1'))
-        #print("byte1 = " + str(byte1))
-        #print("byte2 = " + str(byte2))
-        #print("byte3 = " + str(byte3))
-        #print("byte4 = " + str(byte4))
-        #print("byte5 = " + str(byte5))
+        serialPort.write(chr(byte6).encode('latin_1'))
+
+
 
 
 

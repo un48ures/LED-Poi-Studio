@@ -147,32 +147,32 @@
         </property>
         <item>
          <property name="text">
-          <string>CH20</string>
+          <string>1</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>CH30</string>
+          <string>2</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>CH40</string>
+          <string>3</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>CH50</string>
+          <string>4</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>CH60</string>
+          <string>5</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>CH70</string>
+          <string>6</string>
          </property>
         </item>
         <item>
