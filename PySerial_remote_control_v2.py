@@ -9,14 +9,6 @@ import time
 # Find connected Ports for Arduino
 import serial.tools.list_ports as port_list
 
-# serialPort = serial.Serial(
-#    port=None, baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
-# )
-
-ports = list(port_list.comports())
-for p in ports:
-    print(p)
-
 root = tk.Tk()
 root.title("Remote Control LED Poi Sticks")
 
@@ -47,8 +39,8 @@ def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity)
     serialPort.write(chr(byte4).encode('latin_1'))
     serialPort.write(chr(byte5).encode('latin_1'))
     serialPort.write(chr(byte6).encode('latin_1'))
-    #msg = chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') + chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1')
-    #serialPort.write(msg)
+    # msg = chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') + chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1')
+    # serialPort.write(msg)
 
     print("byte1 = " + str(byte1) + "(Mode)")
     print("byte2 = " + str(byte2) + "(receiver_id)")
@@ -57,9 +49,7 @@ def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity)
     print("byte5 = " + str(byte5) + "(brightness/value)")
     print("byte6 = " + str(byte6) + "(velocity)")
     print("Receiver select: " + str(receiver_select.get()))
-    # time.sleep(0.1)
 
-    # while 1:
     # Wait until there is data waiting in the serial buffer
     if serialPort.in_waiting > 8:
 
@@ -157,31 +147,22 @@ radiom2.grid(row=4, column=0, sticky="W")
 radiom3 = tk.Radiobutton(root, text="Battery Level / Signal Strength", value=3, variable=mode_select)
 radiom3.grid(row=5, column=0, sticky="W")
 
-# COM Port COMBOBOX
-combo = ttk.Combobox(
-    root,
-    state="readonly",
-    values=ports
-)
+# List available COM Ports
+ports = list(port_list.comports())
+for p in ports:
+    print(p)
+# Take first COM Port of List as default
+serialPort = serial.Serial(port=str(ports[0]).split()[0], baudrate=115200, bytesize=8, timeout=2,
+                           stopbits=serial.STOPBITS_ONE)
+# COMBO BOX for COM Port
+combo = ttk.Combobox(root, state="readonly", values=ports)
 combo.grid(row=8, column=0)
 
 
-com1 = str(ports[0])
-print(com1.split()[0])
-
-serialPort = serial.Serial(port=com1.split()[0], baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE)
-
-#combo.set(0)
-#selection = combo.get()
-#print(selection)
-
-# Apply Button COM Port
+# Apply selected COM Port
 def apply():
-    selection = combo.get()
-    print(selection)
-    s1 = selection.split()[0]
-    print(s1)
-    serialPort.setPort(s1)
+    serialPort.setPort(combo.get().split()[0])
+
 
 # Button Apply
 buttonA = tk.Button(root, bg="white", text="Apply", anchor="e", command=apply)
