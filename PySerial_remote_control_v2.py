@@ -1,10 +1,10 @@
+import time
 import tkinter as tk
 from tkinter import ttk
-from datetime import time
+import threading
 
 import serial
 from tkinter import *
-import time
 
 # Find connected Ports for Arduino
 import serial.tools.list_ports as port_list
@@ -14,7 +14,6 @@ root.title("Remote Control LED Poi Sticks")
 
 # Channels: 20 30 40 50 60 70
 receiver_ids = [1, 2, 3, 4, 5, 6]
-
 
 # Protocol:
 # 1.byte - mode
@@ -76,7 +75,6 @@ def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity)
             pass
 
 
-#
 def send_single_all():
     if mode_select.get() == 1:  # Video Light -> Hue
         picture_hue = hslider.get()
@@ -124,6 +122,7 @@ def input_dec():
     send_single_all()
 
 
+
 # Title/Labels
 title = tk.Label(root, bg="yellow", text="Remote Control LED Poi")
 title.grid(row=0, column=0, sticky="W")
@@ -162,6 +161,46 @@ combo.grid(row=8, column=0)
 # Apply selected COM Port
 def apply():
     serialPort.setPort(combo.get().split()[0])
+
+
+def mode_refresher():
+    mode_select_old = mode_select.get()
+    while 1:
+        if mode_select.get() != mode_select_old:
+            send_single_all()
+        if mode_select.get() == 3:
+            check_for_incoming_receiver_values()
+        if mode_select_old != mode_select.get():
+            mode_select_old = mode_select.get()
+        time.sleep(0.25)
+
+
+def check_for_incoming_receiver_values():
+    if serialPort.in_waiting > 8:
+        print("Receiver Values incoming")
+        # Read data out of the buffer until a carriage return / new line is found
+        serialString = serialPort.readline()
+        res = serialString.decode("Ascii").split()
+        # print("after readLine")
+
+        # Print the contents of the serial data
+        try:
+            inputb1.set(res[0] + "V")
+            inputb2.set(res[1] + "V")
+            inputb3.set(res[2] + "V")
+            inputb4.set(res[3] + "V")
+            inputb5.set(res[4] + "V")
+            inputb6.set(res[5] + "V")
+            inputss1.set(res[6] + "%")
+            inputss2.set(res[7] + "%")
+            inputss3.set(res[8] + "%")
+            inputss4.set(res[9] + "%")
+            inputss5.set(res[10] + "%")
+            inputss6.set(res[11] + "%")
+        except:
+            pass
+
+threading.Thread(target=mode_refresher).start()
 
 
 # Button Apply
