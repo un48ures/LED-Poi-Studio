@@ -16,8 +16,13 @@ from pygame import mixer
 import serial.tools.list_ports as port_list
 
 ports = list(port_list.comports())
+ports_names = []
+ports_COMs = []
 for p in ports:
     print(p)
+    ports_COMs.append(p[0])
+    ports_names.append(p[1])
+
 serialPort = serial.Serial(
     port="COM11", baudrate=115200, bytesize=8, write_timeout=1, timeout=2, stopbits=serial.STOPBITS_ONE
 )
@@ -115,6 +120,8 @@ class MyGUI(QMainWindow):
         self.pushButton_2.clicked.connect(self.reset)
         self.pushButton_3.clicked.connect(self.set_marker)
         self.pushButton_4.clicked.connect(self.delete_marker)
+        self.pushButton_5.clicked.connect(self.save_serial)
+        self.comboBox_2.addItems(ports_names)
         # self.label_2.setStyleSheet("border: 10px solid transparent")
         # self.label_2.setText(self.marker_list.output_list_as_string())
         # self.label_2.setStyleSheet("background-color:grey border: 10px solid transparent")
@@ -262,6 +269,10 @@ class MyGUI(QMainWindow):
             # self.label.setText(self.format_time_string(self.passed))
             self.label.setText(self.format_time_string((int(mixer.music.get_pos())) // 1000))
 
+    def save_serial(self):
+        print(self.comboBox_2.currentIndex())
+        print(ports_COMs[self.comboBox_2.currentIndex()])
+        serialPort.setPort(ports_COMs[self.comboBox_2.currentIndex()])
 
 class Arduino:
     def __init__(self):
