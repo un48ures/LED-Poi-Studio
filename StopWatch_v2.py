@@ -24,7 +24,7 @@ for p in ports:
     ports_names.append(p[1])
 
 serialPort = serial.Serial(
-    port="COM11", baudrate=115200, bytesize=8, write_timeout=1, timeout=2, stopbits=serial.STOPBITS_ONE
+    port="COM1", baudrate=115200, bytesize=8, write_timeout=1, timeout=2, stopbits=serial.STOPBITS_ONE
 )
 
 receiver_ids = [1, 2, 3, 4, 5, 6]
