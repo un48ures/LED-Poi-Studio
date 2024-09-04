@@ -40,6 +40,7 @@ brightness = 2  # set fixed global brightness for testing
 saturation = 0  # unused
 velocity = 0  # unused
 
+REDUCTION_FACTOR = 8
 
 class MarkerList:
     def __init__(self):
@@ -95,6 +96,16 @@ class MarkerList:
     def get_marker(self):
         return self.List
 
+    def get_marker_time_ms(self, index):
+        ms = 0
+        if index < len(self.List):
+            m = self.List[index]
+            ms = int(m[1][10]) * 10 + int(m[1][9]) * 100 + int(m[1][7]) * 1000 + int(m[1][6]) * 10000 + int(
+                m[1][4]) * 60 * 1000
+            if ms < 0 or ms > 1200000: # 20 min
+                ms = 0
+        return ms
+
     def set_marker_sent_status(self, marker_number, status_new):
         for lm in self.List:
             if lm[0] == marker_number:
@@ -116,6 +127,7 @@ class MyGUI(QMainWindow):
         self.audio_time = None
         self.audio_signal = None
         self.cursor = None
+        self.first_marker = None
         self.waveform_data = None
         uic.loadUi(ui_file, self)
         # self.setupUi(self)
@@ -139,9 +151,8 @@ class MyGUI(QMainWindow):
         self.pushButton_6.clicked.connect(self.open_audio_file)
         self.comboBox_2.addItems(ports_names)
         self.refresh_table()
-        self.open_audio_file(1)
+        self.open_audio_file(1) # 1 = default file (audio_file_path)
         self.cursor_position = 0
-        self.plot_waveform()
 
     def open_audio_file(self, default):
         if default != 1:
@@ -153,26 +164,45 @@ class MyGUI(QMainWindow):
         self.waveform_widget.clear()
         self.plot_waveform()
 
+    def filt_func(self, x):
+        if x == 0:
+            return False
+        else:
+            return True
+
     def reduce_samples(self, factor):
-        signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
+        signal_filtered = filter(self.filt_func, self.audio_signal) # filter
+        signal_f_lst = []
+        # convert filter obj to list to np array
+        for x in signal_filtered:
+            signal_f_lst.append(x)
+        signal_f_npa = np.array(signal_f_lst) # numpy array needs list to be created
+
+        # signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
+        signal_red = signal_f_npa[np.mod(np.arange(signal_f_npa.size), 2) != 0]
         time_red = self.audio_time[np.mod(np.arange(self.audio_time.size), 2) != 0]
         for x in range(factor):
-            time_red = time_red[np.mod(np.arange(time_red.size), 2) != 0]
-            signal_red = signal_red[np.mod(np.arange(signal_red.size), 2) != 0]
-        return time_red, signal_red
+            signal_red = signal_red[np.mod(np.arange(signal_red.size), 2) != 0] # just throw out samples
+        return np.arange(0, self.audio_time[-1], self.audio_time[-1] / signal_red.size), signal_red
 
     def plot_waveform(self):
         # reduce samples
-        time_red, signal_red = self.reduce_samples(7)
+        time_red, signal_red = self.reduce_samples(REDUCTION_FACTOR)
         print(len(self.audio_signal))
         print(len(signal_red))
-        self.waveform_data = self.waveform_widget.plot(time_red, signal_red)
-        self.cursor = self.waveform_widget.plot([0, 0], [-2 * 10 ** 9, 2 * 10 ** 9], pen='r')
-        self.waveform_widget.plotItem.setMouseEnabled(y=False)
+        self.waveform_widget.plot(time_red, signal_red)
+        self.cursor = self.waveform_widget.plot([0, 0], [0, 0], pen='r')
+        # Marker Plot Handle
+        self.first_marker = self.waveform_widget.plot([0, 0], [0, 0], pen='b')
+        self.waveform_widget.plotItem.setMouseEnabled(y=False) # zoom only in x
 
-    def update_cursor_plot_data(self):
+    def update_cursor_maker_plot_data(self):
         position = mixer.music.get_pos() / 1000
-        self.cursor.setData([position, position], [-2 * 10 ** 9, 2 * 10 ** 9])
+        self.cursor.setData([position, position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
+        # Marker
+        m_pos = self.marker_list.get_marker_time_ms(0) / 1000  # marker
+        if m_pos > 0:
+            self.first_marker.setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
 
     def start_animation(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
@@ -180,7 +210,7 @@ class MyGUI(QMainWindow):
 
     def animation(self):
         timer = QtCore.QTimer()
-        timer.timeout.connect(self.update_cursor_plot_data)
+        timer.timeout.connect(self.update_cursor_maker_plot_data)
         timer.start(50)
         self.start_animation()
 
@@ -282,10 +312,8 @@ class MyGUI(QMainWindow):
 
                     # set marker sent_status "True"
                     self.marker_list.set_marker_sent_status(r[0], "True")
-                    # self.label_2.setText(self.marker_list.output_list_as_string())
-                    starttime = time.time_ns()
                     self.paint_status_green(r[0])  # problematic !
-                    endtime = time.time_ns()
+
 
     def reset(self):
         self.pushButton.setText("Start")
