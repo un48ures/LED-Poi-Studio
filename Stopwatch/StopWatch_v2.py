@@ -1,30 +1,27 @@
+import sys
 import time
 import threading
 import wave
-
 import serial
 import os
 import os.path
-
 from PyQt5 import uic
 from PyQt5.QtWidgets import *
 from PyQt5.uic.properties import QtWidgets
 from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import QColor
-import matplotlib
 import numpy as np
 from pydub import AudioSegment
 import pyqtgraph as pg
-
 from pygame import mixer
+import serial.tools.list_ports as port_list
 
 ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.ui'
 backup_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\markers_backup.txt'
-input_filename = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
+audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
 
 # Find connected Ports for Arduino
-import serial.tools.list_ports as port_list
-
 ports = list(port_list.comports())
 ports_names = []
 ports_COMs = []
@@ -38,7 +35,7 @@ serialPort = serial.Serial(
 )
 
 receiver_ids = [1, 2, 3, 4, 5, 6]
-mode = 2  #  when this program is used automatically Picture Mode (2) is used
+mode = 2  # when this program is used automatically Picture Mode (2) is used
 brightness = 2  # set fixed global brightness for testing
 saturation = 0  # unused
 velocity = 0  # unused
@@ -106,8 +103,7 @@ class MarkerList:
 
     def get_highest_marker_number(self):
         if len(self.List) > 0:
-            print("ListMarkers len > 0")
-            print(self.List[-1][0])
+            print("ListMarkers len: " + str(self.List[-1][0]))
             return int(self.List[-1][0])
         else:
             return 0
@@ -117,6 +113,10 @@ class MyGUI(QMainWindow):
 
     def __init__(self):
         super(MyGUI, self).__init__()
+        self.audio_time = None
+        self.audio_signal = None
+        self.cursor = None
+        self.waveform_data = None
         uic.loadUi(ui_file, self)
         # self.setupUi(self)
         self.show()
@@ -125,9 +125,11 @@ class MyGUI(QMainWindow):
         self.passed = 0
         self.previous_passed = 0
         self.paused = False
-        self.sound_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
-        self.arduino = Arduino_Interface()
+        self.plotwidget = 0
+        self.sound_file = audio_file_path
+        self.arduino = ArduinoInterface()
         self.marker_list = MarkerList()
+        self.audio_converter = AudioConverter()
         self.current_index = self.marker_list.get_highest_marker_number() + 1
         self.pushButton.clicked.connect(self.start_stop)
         self.pushButton_2.clicked.connect(self.reset)
@@ -137,17 +139,51 @@ class MyGUI(QMainWindow):
         self.pushButton_6.clicked.connect(self.open_audio_file)
         self.comboBox_2.addItems(ports_names)
         self.refresh_table()
+        self.open_audio_file(1)
+        self.cursor_position = 0
+        self.plot_waveform()
 
-    def open_audio_file(self):
-        file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3)")
-        self.sound_file = file_info[0]
+    def open_audio_file(self, default):
+        if default != 1:
+            file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3)")
+            self.sound_file = file_info[0]
         mixer.music.load(self.sound_file)
         self.label_4.setText(self.sound_file)
-        signal = convert_mp3_to_signal(self.sound_file)
-        self.plot_waveform(signal)
+        self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
+        self.waveform_widget.clear()
+        self.plot_waveform()
 
-    def plot_waveform(self, signal):
-        self.waveform_widget.plot(signal)
+    def reduce_samples(self, factor):
+        signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
+        time_red = self.audio_time[np.mod(np.arange(self.audio_time.size), 2) != 0]
+        for x in range(factor):
+            time_red = time_red[np.mod(np.arange(time_red.size), 2) != 0]
+            signal_red = signal_red[np.mod(np.arange(signal_red.size), 2) != 0]
+        return time_red, signal_red
+
+    def plot_waveform(self):
+        # reduce samples
+        time_red, signal_red = self.reduce_samples(7)
+        print(len(self.audio_signal))
+        print(len(signal_red))
+        self.waveform_data = self.waveform_widget.plot(time_red, signal_red)
+        self.cursor = self.waveform_widget.plot([0, 0], [-2 * 10 ** 9, 2 * 10 ** 9], pen='r')
+        self.waveform_widget.plotItem.setMouseEnabled(y=False)
+
+    def update_cursor_plot_data(self):
+        position = mixer.music.get_pos() / 1000
+        self.cursor.setData([position, position], [-2 * 10 ** 9, 2 * 10 ** 9])
+
+    def start_animation(self):
+        if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+            QtGui.QGuiApplication.instance().exec()
+
+    def animation(self):
+        timer = QtCore.QTimer()
+        timer.timeout.connect(self.update_cursor_plot_data)
+        timer.start(50)
+        self.start_animation()
+
 
     def refresh_table(self):
         print("Refresh Table")
@@ -181,7 +217,6 @@ class MyGUI(QMainWindow):
             self.table1.setItem(int(row_number) - 1, 4, widget)
         # Tweak to update
         self.table1.setRowCount(len(self.marker_list.List) + 1)
-
 
     def start_stop(self):
         # Stop
@@ -269,7 +304,8 @@ class MyGUI(QMainWindow):
         self.refresh_table()
 
     def set_marker(self):
-        self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed), self.comboBox.currentText(),
+        self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
+                                    self.comboBox.currentText(),
                                     self.spinBox.value(), False)
         # self.label_2.setText(self.marker_list.output_list_as_string())
         self.refresh_table()
@@ -306,7 +342,8 @@ class MyGUI(QMainWindow):
         print(ports_COMs[self.comboBox_2.currentIndex()])
         serialPort.setPort(ports_COMs[self.comboBox_2.currentIndex()])
 
-class Arduino_Interface:
+
+class ArduinoInterface:
     def __init__(self):
         self.bytes = [0]
 
@@ -349,23 +386,27 @@ class Arduino_Interface:
         #         pass
 
 
-def convert_mp3_to_signal(input_file):
-    sound = AudioSegment.from_mp3(input_file)
-    sound.export('converted.wav', format="wav")
-    with wave.open('converted.wav', 'r') as wav_file:
-        signal = wav_file.readframes(-1)
-        # signal = np.fromstring(signal, int)
-        signal = np.frombuffer(signal, int)
-        # Split the data into channels
-        channels = [[] for channel in range(wav_file.getnchannels())]
-        for index, datum in enumerate(signal):
-            channels[index % len(channels)].append(datum)
+class AudioConverter:
+    def __init__(self):
+        self.starttime = 0
 
-        # Get time from indices
-        fs = wav_file.getframerate()
-        Time = np.linspace(0, len(signal) / len(channels) / fs, num=int(len(signal) / len(channels)))
-    print("Conversion of " + str(input_file) + " done!")
-    return signal
+    def convert_mp3_to_array(self, input_file):
+        print("Started WAV Conversion")
+        self.starttime = time.time()
+        sound = AudioSegment.from_mp3(input_file)
+        sound.export('converted.wav', format="wav")
+        with wave.open('converted.wav', 'r') as wav_file:
+            signal = wav_file.readframes(-1)
+            # signal = np.fromstring(signal, int)
+            signal = np.frombuffer(signal, int)
+            # Get time from indices
+            fs = wav_file.getframerate()
+            time_x = np.linspace(0, len(signal) / fs, num=int(len(signal)))
+        print("Conversion of " + str(input_file) + " done!")
+        duration = (int((time.time() - self.starttime) * 100)) / 100  # truncate to 2 decimals
+        print("Conversion took: " + str(duration) + " s")
+        print("Audio duration: " + str(int(len(signal) / fs / 60)) + ' min ' + str(int(len(signal) / fs % 60)) + ' s')
+        return time_x, signal
 
 
 def main():
@@ -373,8 +414,7 @@ def main():
     app = QApplication([])
     window = MyGUI()
     mixer.music.load(window.sound_file)
-    signal = convert_mp3_to_signal(window.sound_file)
-    window.plot_waveform(signal)
+    window.animation()
     app.exec_()
 
 
