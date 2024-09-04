@@ -16,6 +16,7 @@ from pydub import AudioSegment
 import pyqtgraph as pg
 from pygame import mixer
 import serial.tools.list_ports as port_list
+import cProfile
 
 ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.ui'
 backup_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\markers_backup.txt'
@@ -40,7 +41,7 @@ brightness = 2  # set fixed global brightness for testing
 saturation = 0  # unused
 velocity = 0  # unused
 
-REDUCTION_FACTOR = 7
+REDUCTION_FACTOR = 6
 
 
 class MarkerList:
@@ -150,11 +151,11 @@ class MyGUI(QMainWindow):
         self.pushButton_4.clicked.connect(self.delete_marker)
         self.pushButton_5.clicked.connect(self.save_serial_config)
         self.pushButton_6.clicked.connect(self.open_audio_file)
+        self.exit_Button.clicked.connect(self.exit)
         self.comboBox_2.addItems(ports_names)
         self.refresh_table()
         self.open_audio_file(1)  # 1 = default file (audio_file_path)
         self.cursor_position = 0
-
 
     def open_audio_file(self, default):
         if default != 1:
@@ -166,30 +167,20 @@ class MyGUI(QMainWindow):
         self.waveform_widget.clear()
         self.plot_waveform()
 
-    def filt_func(self, x):
-        if x == 0:
-            return False
-        else:
-            return True
-
     def reduce_samples(self, factor):
-        signal_filtered = filter(self.filt_func, self.audio_signal)  # filter
-        signal_f_lst = []
-        # convert filter obj to list to np array
-        for x in signal_filtered:
-            signal_f_lst.append(x)
-        signal_f_npa = np.array(signal_f_lst)  # numpy array needs list to be created
-
-        # signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
-        signal_red = signal_f_npa[np.mod(np.arange(signal_f_npa.size), 2) != 0]
-        time_red = self.audio_time[np.mod(np.arange(self.audio_time.size), 2) != 0]
+        signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
+        # just throw out every 2nd samples for factor times
         for x in range(factor):
-            signal_red = signal_red[np.mod(np.arange(signal_red.size), 2) != 0]  # just throw out samples
-        return np.arange(0, self.audio_time[-1], self.audio_time[-1] / signal_red.size), signal_red
+            signal_red = signal_red[np.mod(np.arange(signal_red.size), 2) != 0]
+        return np.arange(0, self.audio_time[-1], self.audio_time[-1] / signal_red.size), signal_red  # calc time lst
 
     def plot_waveform(self):
         # reduce samples
+        print("Start plotting waveform")
+        starttime = time.time()
         time_red, signal_red = self.reduce_samples(REDUCTION_FACTOR)
+        duration = int((time.time() - starttime) * 100) / 100
+        print(f"Reducing samples finisehd after {duration} s.")
         print(len(self.audio_signal))
         print(len(signal_red))
         wf_widget_plot_handle = self.waveform_widget.plot(time_red, signal_red)
@@ -200,28 +191,38 @@ class MyGUI(QMainWindow):
             self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
 
         self.waveform_widget.plotItem.setMouseEnabled(y=False)  # zoom only in x
+        duration = int((time.time() - starttime) * 100) / 100
+        self.update_marker_plot_data()
+        print(f"Plotting waveform finisehd after {duration} s.")
 
-    def update_cursor_marker_plot_data(self):
+    def update_cursor_plot_data(self):
         position = mixer.music.get_pos() / 1000
         self.cursor.setData([position, position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
 
+    def update_marker_plot_data(self):
         # Marker
         for index in range(len(self.marker_list.List)):
             m_pos = self.marker_list.get_marker_time_ms(index) / 1000  # marker
             if m_pos > 0:
                 # self.first_marker.setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
                 self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
+                pass
             else:
                 self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen='b')
+                pass
+        print(threading.active_count())
 
     def start_animation(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
             QtGui.QGuiApplication.instance().exec()
 
     def animation(self):
-        timer = QtCore.QTimer()
-        timer.timeout.connect(self.update_cursor_marker_plot_data)
-        timer.start(50)
+        timer_cursor = QtCore.QTimer()
+        timer_cursor.timeout.connect(self.update_cursor_plot_data)
+        timer_cursor.start(50)
+        # timer_marker = QtCore.QTimer()
+        # timer_marker.timeout.connect(self.update_marker_plot_data)
+        # timer_marker.start(2000)
         self.start_animation()
 
     def refresh_table(self):
@@ -286,42 +287,41 @@ class MyGUI(QMainWindow):
                 print("Music Play")
 
     def send_marker(self):
+        list_m = self.marker_list.get_marker()
         while self.running:
             current_time_ms = int(mixer.music.get_pos())  # current Time
             # print(f"current time {current_time_ms}")
-            list_m = self.marker_list.get_marker()
-
             # rows -> markers
             for r in list_m:
                 # print("test")
-                ms = int(r[1][10]) * 10 + int(r[1][9]) * 100 + int(r[1][7]) * 1000 + int(r[1][6]) * 10000 + int(
-                    r[1][4]) * 60 * 1000
+                ids = r[2]
+                picture = int(r[3])
                 send_status = r[4]
                 # print(f"For Marker {r[0]} the timestamp is: {ms} ms and sent status is: {send_status}")
                 # Send marker if current time is over planned time (+500ms delay compensation)
                 # Not send marker if older than 1 second
-                if ms < current_time_ms < ms + 1000 and send_status == "False":
-                    # Send marker values
-                    # print("Current time is over timestamp of Marker ----> Send to Arduino")
-                    picture = int(r[3])
-
-                    if r[2] != "ALL":
-                        ids = r[2]
-                        self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
-                        self.label_3.setText(
-                            "Last sent message:\n\n" + f"Channel: {id}\n" + f"Picture Nr.: {picture}\n" +
-                            f"Brightness: {brightness}\n\n")
-                    else:
-                        # Broadcast to all receivers
-                        for ids in receiver_ids:
+                if send_status == "False":
+                    ms = int(r[1][10]) * 10 + int(r[1][9]) * 100 + int(r[1][7]) * 1000 + int(r[1][6]) * 10000 + int(
+                        r[1][4]) * 60 * 1000
+                    if ms < current_time_ms < ms + 1000:
+                        # Send marker values
+                        # print("Current time is over timestamp of Marker ----> Send to Arduino")
+                        if r[2] != "ALL":
                             self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
-                        self.label_3.setText(
-                            "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
-                            f"Brightness: {brightness} \n\n")
+                            #self.label_3.setText(
+                            #    "Last sent message:\n\n" + f"Channel: {ids}\n" + f"Picture Nr.: {picture}\n" +
+                            #    f"Brightness: {brightness}\n\n")
+                        else:
+                            # Broadcast to all receivers
+                            for ids in receiver_ids:
+                                self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
+                            #self.label_3.setText(
+                            #    "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
+                            #    f"Brightness: {brightness} \n\n")
 
-                    # set marker sent_status "True"
-                    self.marker_list.set_marker_sent_status(r[0], "True")
-                    self.paint_status_green(r[0])  # problematic !
+                        # set marker sent_status "True"
+                        # self.marker_list.set_marker_sent_status(r[0], "True")
+                        # self.paint_status_green(r[0])  # problematic !
 
     def reset(self):
         self.pushButton.setText("Start")
@@ -342,6 +342,7 @@ class MyGUI(QMainWindow):
                                     self.comboBox.currentText(),
                                     self.spinBox.value(), False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        self.update_marker_plot_data()
         self.refresh_table()
         self.current_index += 1
 
@@ -368,18 +369,33 @@ class MyGUI(QMainWindow):
             self.started = True
 
         while self.running:
-            self.passed = time.time() - start + until_now
-            self.label.setText(self.format_time_string((int(mixer.music.get_pos())) // 1000))
+            # self.passed = time.time() - start + until_now
+            self.passed = mixer.music.get_pos() / 1000.0
+            # print(mixer.music.get_pos()) # performance ?!
+            # self.label.setText(self.format_time_string((int(mixer.music.get_pos())) // 1000))
+            self.label.setText(self.format_time_string(self.passed))
 
     def save_serial_config(self):
         print(self.comboBox_2.currentIndex())
         print(ports_COMs[self.comboBox_2.currentIndex()])
         serialPort.setPort(ports_COMs[self.comboBox_2.currentIndex()])
+        time.sleep(2.5)
+        self.arduino.go_all_black()
+
+    def exit(self):
+        self.arduino.go_all_black()
+        time.sleep(0.100)
+        exit()
 
 
 class ArduinoInterface:
     def __init__(self):
         self.bytes = [0]
+
+    def go_all_black(self):
+        # Make all LEDs go black
+        for ids in receiver_ids:
+            self.send(mode, ids, 0, saturation, 0, velocity)
 
     # def send(self, channel, picturenum, brightness):
     def send(self, mode, receiver_id, picture_hue, saturation, brightness_value, velocity):
@@ -401,7 +417,7 @@ class ArduinoInterface:
         serialPort.write(chr(byte4).encode('latin_1'))
         serialPort.write(chr(byte5).encode('latin_1'))
         serialPort.write(chr(byte6).encode('latin_1'))
-        serialPort.reset_input_buffer()
+        serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()
 
         # if serialPort.in_waiting > 8:
@@ -453,6 +469,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    cProfile.run('main()')
     # on exit
     # f.close()
