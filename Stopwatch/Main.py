@@ -16,7 +16,7 @@ from Marker import MarkerList
 from AudioConverter import AudioConverter
 
 ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.ui'
-audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
+default_audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
 
 REDUCTION_FACTOR = 6 # Audio Sample reduction factor - plot
 
@@ -25,8 +25,6 @@ mode = 2  # when this program is used automatically Picture Mode (2) is used
 brightness = 2  # set fixed global brightness for testing
 saturation = 0  # unused
 velocity = 0  # unused
-
-
 
 
 class MyGUI(QMainWindow):
@@ -47,7 +45,7 @@ class MyGUI(QMainWindow):
         self.previous_passed = 0
         self.paused = False
         self.plotwidget = 0
-        self.sound_file = audio_file_path
+        self.sound_file = default_audio_file_path
         self.arduino = ArduinoInterface(receiver_ids)
         self.arduino.find_ports()
         self.marker_list = MarkerList()
