@@ -17,6 +17,7 @@ import pyqtgraph as pg
 from pygame import mixer
 import serial.tools.list_ports as port_list
 import cProfile
+import pstats
 
 ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.ui'
 backup_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\markers_backup.txt'
@@ -184,7 +185,7 @@ class MyGUI(QMainWindow):
         print(len(self.audio_signal))
         print(len(signal_red))
         wf_widget_plot_handle = self.waveform_widget.plot(time_red, signal_red)
-        wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
+        # wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
         self.cursor = self.waveform_widget.plot([0, 0], [0, 0], pen='r')
         # Marker Plot Handle
         for c in range(len(self.marker_list.List)):
@@ -219,10 +220,10 @@ class MyGUI(QMainWindow):
     def animation(self):
         timer_cursor = QtCore.QTimer()
         timer_cursor.timeout.connect(self.update_cursor_plot_data)
-        timer_cursor.start(50)
-        # timer_marker = QtCore.QTimer()
-        # timer_marker.timeout.connect(self.update_marker_plot_data)
-        # timer_marker.start(2000)
+        timer_cursor.start(25)
+        timer_marker = QtCore.QTimer()
+        timer_marker.timeout.connect(self.stopwatch)
+        timer_marker.start(10)
         self.start_animation()
 
     def refresh_table(self):
@@ -271,7 +272,7 @@ class MyGUI(QMainWindow):
             self.running = True
             self.pushButton.setText("Stop")
             # self.pushButton_2.setEnabled(False)
-            threading.Thread(target=self.stopwatch).start()
+            # threading.Thread(target=self.stopwatch).start()
             print(self.checkBox.isChecked())
             if self.checkBox.isChecked():
                 # Check for next marker to be sent
@@ -289,7 +290,8 @@ class MyGUI(QMainWindow):
     def send_marker(self):
         list_m = self.marker_list.get_marker()
         while self.running:
-            current_time_ms = int(mixer.music.get_pos())  # current Time
+            starttime = time.time_ns()
+            # current_time_ms = int(mixer.music.get_pos())  # current Time
             # print(f"current time {current_time_ms}")
             # rows -> markers
             for r in list_m:
@@ -303,25 +305,28 @@ class MyGUI(QMainWindow):
                 if send_status == "False":
                     ms = int(r[1][10]) * 10 + int(r[1][9]) * 100 + int(r[1][7]) * 1000 + int(r[1][6]) * 10000 + int(
                         r[1][4]) * 60 * 1000
-                    if ms < current_time_ms < ms + 1000:
+                    if ms < int(mixer.music.get_pos()) < ms + 250:
                         # Send marker values
                         # print("Current time is over timestamp of Marker ----> Send to Arduino")
+                        starttime_serial_send = time.time_ns()
                         if r[2] != "ALL":
                             self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
-                            #self.label_3.setText(
-                            #    "Last sent message:\n\n" + f"Channel: {ids}\n" + f"Picture Nr.: {picture}\n" +
-                            #    f"Brightness: {brightness}\n\n")
+                            self.label_3.setText(
+                                "Last sent message:\n\n" + f"Channel: {ids}\n" + f"Picture Nr.: {picture}\n" +
+                                f"Brightness: {brightness}\n\n")
                         else:
                             # Broadcast to all receivers
                             for ids in receiver_ids:
                                 self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
-                            #self.label_3.setText(
-                            #    "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
-                            #    f"Brightness: {brightness} \n\n")
-
+                            self.label_3.setText(
+                                "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
+                                f"Brightness: {brightness} \n\n")
+                        print("Duration for serial_send: " + str((time.time_ns() - starttime_serial_send) / 1000000) + " ms")
                         # set marker sent_status "True"
-                        # self.marker_list.set_marker_sent_status(r[0], "True")
-                        # self.paint_status_green(r[0])  # problematic !
+                        r[4] = "True"
+                        self.paint_status_green(r[0])  # problematic !
+            #time.sleep(0.001)
+            print("Duration for Thread send_marker: " + str((time.time_ns() - starttime) / 1000000) + " ms")
 
     def reset(self):
         self.pushButton.setText("Start")
@@ -361,19 +366,10 @@ class MyGUI(QMainWindow):
         return f"{int(hours):02d}:{int(mins):02d}:{int(secs):02d}:{int((self.passed % 1) * 100):02d}"
 
     def stopwatch(self):
-        start = time.time()
-        if self.started:
-            until_now = self.passed
-        else:
-            until_now = 0
-            self.started = True
-
-        while self.running:
-            # self.passed = time.time() - start + until_now
-            self.passed = mixer.music.get_pos() / 1000.0
-            # print(mixer.music.get_pos()) # performance ?!
-            # self.label.setText(self.format_time_string((int(mixer.music.get_pos())) // 1000))
-            self.label.setText(self.format_time_string(self.passed))
+        self.passed = mixer.music.get_pos() / 1000.0
+        if self.passed < 0:
+            self.passed = 0
+        self.label.setText(self.format_time_string(self.passed))
 
     def save_serial_config(self):
         print(self.comboBox_2.currentIndex())
@@ -385,7 +381,7 @@ class MyGUI(QMainWindow):
     def exit(self):
         self.arduino.go_all_black()
         time.sleep(0.100)
-        exit()
+        sys.exit()
 
 
 class ArduinoInterface:
@@ -399,24 +395,12 @@ class ArduinoInterface:
 
     # def send(self, channel, picturenum, brightness):
     def send(self, mode, receiver_id, picture_hue, saturation, brightness_value, velocity):
-        byte1 = int(mode)
-        byte2 = int(receiver_id)
-        byte3 = int(picture_hue)
-        byte4 = int(saturation)
-        byte5 = int(brightness_value)
-        byte6 = int(velocity)
-        # print("byte1 = " + str(byte1) + "(Mode)")
-        # print("byte2 = " + str(byte2) + "(receiver_id)")
-        # print("byte3 = " + str(byte3) + "(picture/hue)")
-        # print("byte4 = " + str(byte4) + "(saturation)")
-        # print("byte5 = " + str(byte5) + "(brightness/value)")
-        # print("byte6 = " + str(byte6) + "(velocity)")
-        serialPort.write(chr(byte1).encode('latin_1'))
-        serialPort.write(chr(byte2).encode('latin_1'))
-        serialPort.write(chr(byte3).encode('latin_1'))
-        serialPort.write(chr(byte4).encode('latin_1'))
-        serialPort.write(chr(byte5).encode('latin_1'))
-        serialPort.write(chr(byte6).encode('latin_1'))
+        byte1, byte2, byte3, byte4, byte5, byte6 = int(mode), int(receiver_id), int(picture_hue), int(saturation), \
+                                                   int(brightness_value), int(velocity)
+        starttime_SP_write = time.time_ns()
+        serialPort.write(chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
+                         chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1'))
+        print("Duration for serial port write: " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
         serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()
 
@@ -462,6 +446,7 @@ class AudioConverter:
 def main():
     mixer.init()
     app = QApplication([])
+    cProfile.run('MyGUI()', 'PROFILE.txt')
     window = MyGUI()
     mixer.music.load(window.sound_file)
     window.animation()
@@ -469,6 +454,6 @@ def main():
 
 
 if __name__ == "__main__":
-    cProfile.run('main()')
+    main()
     # on exit
     # f.close()
