@@ -44,6 +44,8 @@ velocity = 0  # unused
 
 REDUCTION_FACTOR = 6
 
+RECEIVER_COUNT = 6
+
 
 class MarkerList:
     def __init__(self):
@@ -321,11 +323,12 @@ class MyGUI(QMainWindow):
                             self.label_3.setText(
                                 "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
                                 f"Brightness: {brightness} \n\n")
-                        print("Duration for serial_send: " + str((time.time_ns() - starttime_serial_send) / 1000000) + " ms")
+                        # print("Duration for serial_send: " + str(
+                        # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
                         # set marker sent_status "True"
                         r[4] = "True"
                         self.paint_status_green(r[0])  # problematic !
-            #time.sleep(0.001)
+            # time.sleep(0.001)
             print("Duration for Thread send_marker: " + str((time.time_ns() - starttime) / 1000000) + " ms")
 
     def reset(self):
@@ -386,12 +389,17 @@ class MyGUI(QMainWindow):
 
 class ArduinoInterface:
     def __init__(self):
-        self.bytes = [0]
+        self.voltages = [0] * RECEIVER_COUNT
+        self.signal_strength = [0] * RECEIVER_COUNT
 
     def go_all_black(self):
         # Make all LEDs go black
         for ids in receiver_ids:
             self.send(mode, ids, 0, saturation, 0, velocity)
+
+    def print_receiver_infos(self):
+        for x in range(RECEIVER_COUNT):
+            print(f"Receiver {x} voltage: {self.voltages[x]} signal strength: {self.signal_strength[x]}")
 
     # def send(self, channel, picturenum, brightness):
     def send(self, mode, receiver_id, picture_hue, saturation, brightness_value, velocity):
@@ -401,23 +409,29 @@ class ArduinoInterface:
         serialPort.write(chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
                          chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1'))
         print("Duration for serial port write: " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
-        serialPort.reset_input_buffer()  # Fixed some problems earlier!
+        # serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()
 
-        # if serialPort.in_waiting > 8:
-        #     # Read data out of the buffer until a carriage return / new line is found
-        #     serialString = serialPort.readline()
-        #     res = serialString.decode("Ascii").split()
-        #     # print("after readLine")
-        #
-        #     # Print the contents of the serial data
-        #     try:
-        #         for d in res:
-        #             print(d, end="")
-        #         print("")
-        #     except:
-        #         print("Error")
-        #         pass
+        if serialPort.in_waiting > 0:
+            # Read data out of the buffer until a carriage return / new line is found
+            bytearray = serialPort.readline()
+            res = str(bytearray.decode("Ascii"))
+            lst = res.split()
+            self.voltages = lst[:6]
+            self.signal_strength = lst[-6:]
+
+            # self.print_receiver_infos()
+
+        # print("after readLine")
+
+        # Print the contents of the serial data
+        # try:
+        #     for d in res:
+        #         print(d, end="")
+        #     print("")
+        # except:
+        #     print("Error")
+        #     pass
 
 
 class AudioConverter:
