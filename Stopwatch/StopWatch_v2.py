@@ -23,19 +23,6 @@ ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.
 backup_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\markers_backup.txt'
 audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
 
-# Find connected Ports for Arduino
-ports = list(port_list.comports())
-ports_names = []
-ports_COMs = []
-for p in ports:
-    print(p)
-    ports_COMs.append(p[0])
-    ports_names.append(p[1])
-
-serialPort = serial.Serial(
-    port=ports_COMs[0], baudrate=115200, bytesize=8, write_timeout=1, timeout=2, stopbits=serial.STOPBITS_ONE
-)
-
 receiver_ids = [1, 2, 3, 4, 5, 6]
 mode = 2  # when this program is used automatically Picture Mode (2) is used
 brightness = 2  # set fixed global brightness for testing
@@ -119,7 +106,7 @@ class MarkerList:
 
     def get_highest_marker_number(self):
         if len(self.List) > 0:
-            print("ListMarkers len: " + str(self.List[-1][0]))
+            # print("ListMarkers len: " + str(self.List[-1][0]))
             return int(self.List[-1][0])
         else:
             return 0
@@ -145,6 +132,7 @@ class MyGUI(QMainWindow):
         self.plotwidget = 0
         self.sound_file = audio_file_path
         self.arduino = ArduinoInterface()
+        self.arduino.find_ports()
         self.marker_list = MarkerList()
         self.audio_converter = AudioConverter()
         self.current_index = self.marker_list.get_highest_marker_number() + 1
@@ -155,10 +143,11 @@ class MyGUI(QMainWindow):
         self.pushButton_5.clicked.connect(self.save_serial_config)
         self.pushButton_6.clicked.connect(self.open_audio_file)
         self.exit_Button.clicked.connect(self.exit)
-        self.comboBox_2.addItems(ports_names)
-        self.refresh_table()
+        self.comboBox_2.addItems(self.arduino.ports_names)
+        self.refresh_marker_table()
         self.open_audio_file(1)  # 1 = default file (audio_file_path)
         self.cursor_position = 0
+        self.create_infos_table()
 
     def open_audio_file(self, default):
         if default != 1:
@@ -213,7 +202,6 @@ class MyGUI(QMainWindow):
             else:
                 self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen='b')
                 pass
-        print(threading.active_count())
 
     def start_animation(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
@@ -223,12 +211,15 @@ class MyGUI(QMainWindow):
         timer_cursor = QtCore.QTimer()
         timer_cursor.timeout.connect(self.update_cursor_plot_data)
         timer_cursor.start(25)
-        timer_marker = QtCore.QTimer()
-        timer_marker.timeout.connect(self.stopwatch)
-        timer_marker.start(10)
+        timer_clock = QtCore.QTimer()
+        timer_clock.timeout.connect(self.clock)
+        timer_clock.start(10)
+        timer_info_table = QtCore.QTimer()
+        timer_info_table.timeout.connect(self.update_info_table)
+        timer_info_table.start(250)
         self.start_animation()
 
-    def refresh_table(self):
+    def refresh_marker_table(self):
         print("Refresh Table")
         self.table1.clear()
         self.table1.setRowCount(len(self.marker_list.List))
@@ -248,6 +239,20 @@ class MyGUI(QMainWindow):
             row_counter = row_counter + 1
         # Tweak to update
         self.table1.setRowCount(len(self.marker_list.List) + 1)
+
+    def create_infos_table(self):
+        self.tableWidget.setRowCount(RECEIVER_COUNT)
+        for r in range(RECEIVER_COUNT):
+            self.tableWidget.setItem(r, 0, QtWidgets.QTableWidgetItem("LED Poi " + str(r + 1)))
+            self.tableWidget.setItem(r, 1, QtWidgets.QTableWidgetItem(str(self.arduino.voltages[r]) + " V"))
+            self.tableWidget.setItem(r, 2, QtWidgets.QTableWidgetItem(str(self.arduino.signal_strength[r]) + " %"))
+
+    def update_info_table(self):
+        for r in range(RECEIVER_COUNT):
+            item = self.tableWidget.item(r, 1)
+            item.setText(str(self.arduino.voltages[r]) + " V")
+            item = self.tableWidget.item(r, 2)
+            item.setText(str(self.arduino.signal_strength[r]) + " %")
 
     # Refresh status in table from false to true
     def paint_status_green(self, row_number):
@@ -293,20 +298,16 @@ class MyGUI(QMainWindow):
         list_m = self.marker_list.get_marker()
         while self.running:
             starttime = time.time_ns()
-            # current_time_ms = int(mixer.music.get_pos())  # current Time
-            # print(f"current time {current_time_ms}")
             # rows -> markers
             for r in list_m:
-                # print("test")
                 ids = r[2]
                 picture = int(r[3])
                 send_status = r[4]
                 # print(f"For Marker {r[0]} the timestamp is: {ms} ms and sent status is: {send_status}")
-                # Send marker if current time is over planned time (+500ms delay compensation)
-                # Not send marker if older than 1 second
                 if send_status == "False":
                     ms = int(r[1][10]) * 10 + int(r[1][9]) * 100 + int(r[1][7]) * 1000 + int(r[1][6]) * 10000 + int(
                         r[1][4]) * 60 * 1000
+                    # Not send marker if older than 250ms
                     if ms < int(mixer.music.get_pos()) < ms + 250:
                         # Send marker values
                         # print("Current time is over timestamp of Marker ----> Send to Arduino")
@@ -328,8 +329,8 @@ class MyGUI(QMainWindow):
                         # set marker sent_status "True"
                         r[4] = "True"
                         self.paint_status_green(r[0])  # problematic !
-            # time.sleep(0.001)
-            print("Duration for Thread send_marker: " + str((time.time_ns() - starttime) / 1000000) + " ms")
+            time.sleep(0.001)
+            # print("Duration for Thread send_marker: " + str((time.time_ns() - starttime) / 1000000) + " ms")
 
     def reset(self):
         self.pushButton.setText("Start")
@@ -343,7 +344,7 @@ class MyGUI(QMainWindow):
         # Make all LEDs go black
         for ids in receiver_ids:
             self.arduino.send(mode, ids, 0, saturation, 0, velocity)
-        self.refresh_table()
+        self.refresh_marker_table()
 
     def set_marker(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
@@ -351,7 +352,7 @@ class MyGUI(QMainWindow):
                                     self.spinBox.value(), False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
-        self.refresh_table()
+        self.refresh_marker_table()
         self.current_index += 1
 
     def delete_marker(self):
@@ -360,7 +361,7 @@ class MyGUI(QMainWindow):
             self.marker_list.delete_last()
             self.lst_markers_plt_h[self.current_index - 1].setData([0, 0], [0, 0], pen='b')  # delete marker from plot
             self.lst_markers_plt_h.pop(self.current_index - 1)
-            self.refresh_table()
+            self.refresh_marker_table()
 
     def format_time_string(self, time_passed):
         secs = time_passed % 60
@@ -368,21 +369,20 @@ class MyGUI(QMainWindow):
         hours = mins // 60
         return f"{int(hours):02d}:{int(mins):02d}:{int(secs):02d}:{int((self.passed % 1) * 100):02d}"
 
-    def stopwatch(self):
+    def clock(self):
         self.passed = mixer.music.get_pos() / 1000.0
         if self.passed < 0:
             self.passed = 0
         self.label.setText(self.format_time_string(self.passed))
 
     def save_serial_config(self):
-        print(self.comboBox_2.currentIndex())
-        print(ports_COMs[self.comboBox_2.currentIndex()])
-        serialPort.setPort(ports_COMs[self.comboBox_2.currentIndex()])
+        self.arduino.serialPort.setPort(self.arduino.ports_COMs[self.comboBox_2.currentIndex()])
         time.sleep(2.5)
         self.arduino.go_all_black()
 
     def exit(self):
         self.arduino.go_all_black()
+        self.arduino.serialPort.close()
         time.sleep(0.100)
         sys.exit()
 
@@ -391,6 +391,33 @@ class ArduinoInterface:
     def __init__(self):
         self.voltages = [0] * RECEIVER_COUNT
         self.signal_strength = [0] * RECEIVER_COUNT
+        self.ports_names = []
+        self.ports_COMs = []
+        self.serialPort = None
+
+    def find_ports(self):
+        # Find connected Ports for Arduino
+        ports = list(port_list.comports())
+
+        for p in ports:
+            print(p)
+            self.ports_COMs.append(p[0])
+            self.ports_names.append(p[1])
+
+        index = 0
+        for p in self.ports_names:
+            index = index + 1
+            if "arduino uno" in p.lower():
+                self.serialPort = serial.Serial(
+                    port=self.ports_COMs[index - 1], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
+                    stopbits=serial.STOPBITS_ONE
+                )
+
+        if not self.serialPort.is_open: # open just the first port
+            self.serialPort = serial.Serial(
+                port=self.ports_COMs[0], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
+                stopbits=serial.STOPBITS_ONE
+            )
 
     def go_all_black(self):
         # Make all LEDs go black
@@ -403,23 +430,25 @@ class ArduinoInterface:
 
     # def send(self, channel, picturenum, brightness):
     def send(self, mode, receiver_id, picture_hue, saturation, brightness_value, velocity):
+        starttime_SP_write = time.time_ns()
         byte1, byte2, byte3, byte4, byte5, byte6 = int(mode), int(receiver_id), int(picture_hue), int(saturation), \
                                                    int(brightness_value), int(velocity)
-        starttime_SP_write = time.time_ns()
-        serialPort.write(chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
+
+        self.serialPort.write(chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
                          chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1'))
-        print("Duration for serial port write: " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
-        # serialPort.reset_input_buffer()  # Fixed some problems earlier!
+        # print("Duration for serial port write " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
+        # self.serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()
 
-        if serialPort.in_waiting > 0:
+        if self.serialPort.in_waiting > 0:
             # Read data out of the buffer until a carriage return / new line is found
-            bytearray = serialPort.readline()
+            bytearray = self.serialPort.readline()
             res = str(bytearray.decode("Ascii"))
             lst = res.split()
             self.voltages = lst[:6]
             self.signal_strength = lst[-6:]
 
+        print("Duration for serial port write and receive: " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
             # self.print_receiver_infos()
 
         # print("after readLine")
