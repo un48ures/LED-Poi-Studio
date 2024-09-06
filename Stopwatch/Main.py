@@ -14,15 +14,16 @@ import pstats
 from ArduinoInterface import ArduinoInterface
 from Marker import MarkerList
 from AudioConverter import AudioConverter
+import pyqtgraph as pg
 
 ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.ui'
-default_audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\song.mp3'
+default_audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Syren.mp3'
 
-REDUCTION_FACTOR = 6 # Audio Sample reduction factor - plot
+REDUCTION_FACTOR = 4 # Audio Sample reduction factor - plot
 
 receiver_ids = [1, 2, 3, 4, 5, 6]
 mode = 2  # when this program is used automatically Picture Mode (2) is used
-brightness = 2  # set fixed global brightness for testing
+# brightness = 10  # set fixed global brightness for testing
 saturation = 0  # unused
 velocity = 0  # unused
 
@@ -57,16 +58,45 @@ class MyGUI(QMainWindow):
         self.pushButton_4.clicked.connect(self.delete_marker)
         self.pushButton_5.clicked.connect(self.save_serial_config)
         self.pushButton_6.clicked.connect(self.open_audio_file)
+        self.pushButton_7.clicked.connect(self.set_marker_off)
         self.exit_Button.clicked.connect(self.exit)
         self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
         self.open_audio_file(1)  # 1 = default file (audio_file_path)
-        self.cursor_position = 0
+        self.cursor_position = 0 # seconds in float
         self.create_infos_table()
+        # mouse click
+        self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
+        self.waveform_widget.scene().sigMouseClicked.connect(self.mouse_clicked_play_cursor)
+        self.music_startpoint_offset = 0
+
+    def mouse_moved(self, evt):
+        vb = self.waveform_widget.plotItem.vb
+        if self.waveform_widget.sceneBoundingRect().contains(evt):
+            mouse_point = vb.mapSceneToView(evt)
+            # print(f"X： {mouse_point.x()} Y: {mouse_point.y()}</p>")
+
+    def mouse_clicked_play_cursor(self, evt):
+        vb = self.waveform_widget.plotItem.vb
+        scene_coords = evt.scenePos()
+        if self.waveform_widget.sceneBoundingRect().contains(scene_coords):
+            mouse_point = vb.mapSceneToView(scene_coords)
+            print(f'clicked plot X: {mouse_point.x()}, Y: {mouse_point.y()}, event: {evt}')
+            mixer.music.stop()
+            mixer.music.play()
+            mixer.music.set_pos(mouse_point.x())
+            mixer.music.pause()
+            self.running = False
+            self.paused = True
+            self.music_startpoint_offset = mouse_point.x()
+
+            # reset all markers to "False"
+            self.marker_list.reset_send_status_all()
+
 
     def open_audio_file(self, default):
         if default != 1:
-            file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3)")
+            file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3 *.wav *.aac *.ogg)")
             self.sound_file = file_info[0]
         mixer.music.load(self.sound_file)
         self.label_4.setText(self.sound_file)
@@ -92,10 +122,10 @@ class MyGUI(QMainWindow):
         print(len(signal_red))
         wf_widget_plot_handle = self.waveform_widget.plot(time_red, signal_red)
         # wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
-        self.cursor = self.waveform_widget.plot([0, 0], [0, 0], pen='r')
+        self.cursor = self.waveform_widget.plot([0, 0], [0, 0], pen=pg.mkPen('r', width=1))
         # Marker Plot Handle
         for c in range(len(self.marker_list.List)):
-            self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+            self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen=pg.mkPen('b', width=2)))
 
         self.waveform_widget.plotItem.setMouseEnabled(y=False)  # zoom only in x
         duration = int((time.time() - starttime) * 100) / 100
@@ -103,13 +133,13 @@ class MyGUI(QMainWindow):
         print(f"Plotting waveform finisehd after {duration} s.")
 
     def update_cursor_plot_data(self):
-        position = mixer.music.get_pos() / 1000
-        self.cursor.setData([position, position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
+        self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
+        self.cursor.setData([ self.cursor_position,  self.cursor_position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
 
     def update_marker_plot_data(self):
         # Marker
         for index in range(len(self.marker_list.List)):
-            m_pos = self.marker_list.get_marker_time_ms(index) / 1000  # marker
+            m_pos = self.marker_list.get_marker_time_ms_by_index(index) / 1000  # marker
             if m_pos > 0:
                 # self.first_marker.setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
                 self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
@@ -132,6 +162,9 @@ class MyGUI(QMainWindow):
         timer_info_table = QtCore.QTimer()
         timer_info_table.timeout.connect(self.update_info_table)
         timer_info_table.start(250)
+        timer_send = QtCore.QTimer()
+        timer_send.timeout.connect(self.send_marker)
+        timer_send.start(1)
         self.start_animation()
 
     def refresh_marker_table(self):
@@ -146,9 +179,9 @@ class MyGUI(QMainWindow):
                 widget = QtWidgets.QTableWidgetItem(items)
                 # Color for Status False (Red) and True (Green)
                 if items == "False":
-                    widget.setBackground(QColor(255, 0, 0))
+                    widget.setBackground(QColor(220, 20, 0))
                 elif items == "True":
-                    widget.setBackground(QColor(0, 255, 0))
+                    widget.setBackground(QColor(20, 220, 0))
                 self.table1.setItem(row_counter, item_counter, widget)
                 item_counter = item_counter + 1
             row_counter = row_counter + 1
@@ -168,16 +201,18 @@ class MyGUI(QMainWindow):
             item.setText(str(self.arduino.voltages[r]) + " V")
             item = self.tableWidget.item(r, 2)
             item.setText(str(self.arduino.signal_strength[r]) + " %")
+        self.label_brightness.setText(str(self.brightnessSlider.value())) # update brightness slider label
+        self.label_velocity.setText(str(self.velocitySlider.value()) + " ms")  # update brightness slider label
 
     # Refresh status in table from false to true
-    def paint_status_green(self, row_number):
+    def paint_status_green(self, row_index):
         self.table1.setRowCount(len(self.marker_list.List))
         # Color for Status False (Red) and True (Green)
-        status = self.marker_list.List[int(row_number) - 1][4]
+        status = self.marker_list.List[int(row_index)][4]
         if status == "True":
             widget = QtWidgets.QTableWidgetItem(status)
             widget.setBackground(QColor(0, 255, 0))
-            self.table1.setItem(int(row_number) - 1, 4, widget)
+            self.table1.setItem(int(row_index), 4, widget)
         # Tweak to update
         self.table1.setRowCount(len(self.marker_list.List) + 1)
 
@@ -199,21 +234,24 @@ class MyGUI(QMainWindow):
             if self.checkBox.isChecked():
                 # Check for next marker to be sent
                 print("Thread send marker started")
-                threading.Thread(target=self.send_marker).start()
+                # threading.Thread(target=self.send_marker).start()
             # Play Music
             if self.paused:
                 mixer.music.unpause()
                 self.paused = False
                 print("Music resume")
             else:
+                # mixer.music.play(-1, self.music_startpoint)
                 mixer.music.play()
                 print("Music Play")
 
     def send_marker(self):
-        list_m = self.marker_list.get_marker()
-        while self.running:
+        if self.checkBox.isChecked() and self.running:
+            list_m = self.marker_list.get_marker()
+            # while self.running:
             starttime = time.time_ns()
             # rows -> markers
+            index = 0
             for r in list_m:
                 ids = r[2]
                 picture = int(r[3])
@@ -223,28 +261,29 @@ class MyGUI(QMainWindow):
                     ms = int(r[1][10]) * 10 + int(r[1][9]) * 100 + int(r[1][7]) * 1000 + int(r[1][6]) * 10000 + int(
                         r[1][4]) * 60 * 1000
                     # Not send marker if older than 250ms
-                    if ms < int(mixer.music.get_pos()) < ms + 250:
+                    if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 50):  # 0 <-> 250
                         # Send marker values
                         # print("Current time is over timestamp of Marker ----> Send to Arduino")
                         starttime_serial_send = time.time_ns()
                         if r[2] != "ALL":
-                            self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
+                            self.arduino.send(mode, ids, picture, saturation, self.brightnessSlider.value(), self.velocitySlider.value())
                             self.label_3.setText(
                                 "Last sent message:\n\n" + f"Channel: {ids}\n" + f"Picture Nr.: {picture}\n" +
-                                f"Brightness: {brightness}\n\n")
+                                f"Brightness: {self.brightnessSlider.value()}\n\n")
                         else:
                             # Broadcast to all receivers
                             for ids in receiver_ids:
-                                self.arduino.send(mode, ids, picture, saturation, brightness, velocity)
+                                self.arduino.send(mode, ids, picture, saturation, self.brightnessSlider.value(), self.velocitySlider.value())
                             self.label_3.setText(
                                 "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
-                                f"Brightness: {brightness} \n\n")
+                                f"Brightness: {self.brightnessSlider.value()} \n\n")
                         # print("Duration for serial_send: " + str(
                         # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
                         # set marker sent_status "True"
                         r[4] = "True"
-                        self.paint_status_green(r[0])  # problematic !
-            time.sleep(0.001)
+                        self.paint_status_green(index)  # problematic !
+                index += 1
+            # time.sleep(0.001)
             # print("Duration for Thread send_marker: " + str((time.time_ns() - starttime) / 1000000) + " ms")
 
     def reset(self):
@@ -256,6 +295,7 @@ class MyGUI(QMainWindow):
         print("Music stop")
         self.marker_list.reset_send_status_all()
         self.passed = 0
+        self.music_startpoint_offset = 0
         # Make all LEDs go black
         for ids in receiver_ids:
             self.arduino.send(mode, ids, 0, saturation, 0, velocity)
@@ -270,12 +310,22 @@ class MyGUI(QMainWindow):
         self.refresh_marker_table()
         self.current_index += 1
 
+    def set_marker_off(self):
+        self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
+                                    self.comboBox.currentText(),
+                                    0, False)
+        self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        self.update_marker_plot_data()
+        self.refresh_marker_table()
+        self.current_index += 1
+
     def delete_marker(self):
-        if self.current_index > 0:
-            self.current_index -= 1
-            self.marker_list.delete_last()
-            self.lst_markers_plt_h[self.current_index - 1].setData([0, 0], [0, 0], pen='b')  # delete marker from plot
-            self.lst_markers_plt_h.pop(self.current_index - 1)
+        # delete nearest marker
+        # find nearest marker
+        index = self.marker_list.delete_next_marker_to_time_ms(self.cursor_position * 1000)
+        if index > -1:
+            self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen='b')  # delete marker from plot
+            self.lst_markers_plt_h.pop(index)
             self.refresh_marker_table()
 
     def format_time_string(self, time_passed):
@@ -285,7 +335,7 @@ class MyGUI(QMainWindow):
         return f"{int(hours):02d}:{int(mins):02d}:{int(secs):02d}:{int((self.passed % 1) * 100):02d}"
 
     def clock(self):
-        self.passed = mixer.music.get_pos() / 1000.0
+        self.passed = mixer.music.get_pos() / 1000.0 + self.music_startpoint_offset
         if self.passed < 0:
             self.passed = 0
         self.label.setText(self.format_time_string(self.passed))
