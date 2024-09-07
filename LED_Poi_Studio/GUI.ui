@@ -748,7 +748,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QSlider" name="horizontalSlider_2">
+               <widget class="QSlider" name="colorSlider">
                 <property name="minimumSize">
                  <size>
                   <width>500</width>

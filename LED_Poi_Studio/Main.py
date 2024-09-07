@@ -1,6 +1,7 @@
 import sys
 import time
 import threading
+import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import *
 from PyQt5.uic.properties import QtWidgets
@@ -16,8 +17,10 @@ from Marker import MarkerList
 from AudioConverter import AudioConverter
 import pyqtgraph as pg
 
-ui_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\stopwatch3.ui'
-default_audio_file_path = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Syren.mp3'
+dirname = os.path.dirname(__file__)
+
+ui_file = dirname + '/GUI.ui'
+default_audio_file_path = dirname + '/Syren.mp3'
 
 REDUCTION_FACTOR = 4 # Audio Sample reduction factor - plot
 
@@ -266,14 +269,14 @@ class MyGUI(QMainWindow):
                         # print("Current time is over timestamp of Marker ----> Send to Arduino")
                         starttime_serial_send = time.time_ns()
                         if r[2] != "ALL":
-                            self.arduino.send(mode, ids, picture, saturation, self.brightnessSlider.value(), self.velocitySlider.value())
+                            self.arduino.send(mode, ids, picture, self.colorSlider.value(), saturation, self.brightnessSlider.value(), self.velocitySlider.value())
                             self.label_3.setText(
                                 "Last sent message:\n\n" + f"Channel: {ids}\n" + f"Picture Nr.: {picture}\n" +
                                 f"Brightness: {self.brightnessSlider.value()}\n\n")
                         else:
                             # Broadcast to all receivers
                             for ids in receiver_ids:
-                                self.arduino.send(mode, ids, picture, saturation, self.brightnessSlider.value(), self.velocitySlider.value())
+                                self.arduino.send(mode, ids, picture, self.colorSlider.value(), saturation, self.brightnessSlider.value(), self.velocitySlider.value())
                             self.label_3.setText(
                                 "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
                                 f"Brightness: {self.brightnessSlider.value()} \n\n")
@@ -298,7 +301,7 @@ class MyGUI(QMainWindow):
         self.music_startpoint_offset = 0
         # Make all LEDs go black
         for ids in receiver_ids:
-            self.arduino.send(mode, ids, 0, saturation, 0, velocity)
+            self.arduino.send(mode, ids, 0, 0, saturation, 0, velocity)
         self.refresh_marker_table()
 
     def set_marker(self):

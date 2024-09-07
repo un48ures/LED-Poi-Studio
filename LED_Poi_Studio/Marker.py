@@ -1,7 +1,8 @@
 import os
 import os.path
 
-backup_file = 'C:\\Users\\felix\\PycharmProjects\\Controller\\Stopwatch\\markers_backup.txt'
+dirname = os.path.dirname(__file__)
+backup_file = dirname + '/markers_backup.txt'
 
 class MarkerList:
     def __init__(self):
