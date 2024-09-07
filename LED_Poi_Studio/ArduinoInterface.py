@@ -49,12 +49,12 @@ class ArduinoInterface:
     # def send(self, channel, picturenum, brightness):
     def send(self, mode, receiver_id, picture, hue, saturation, brightness_value, velocity):
         starttime_SP_write = time.time_ns()
-        byte1, byte2, byte3, byte4, byte5, byte6, byte7 = int(mode), int(receiver_id), int(picture), int(hue), int(saturation), \
-                                                   int(brightness_value), int(velocity)
-
+        byte1, byte2, byte3, byte4, byte5, byte6, byte7 = int(mode), int(receiver_id), int(picture), int(hue), \
+                                                          int(saturation), int(brightness_value), int(velocity)
         self.serialPort.write(
             chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
-            chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1')+ chr(byte7).encode('latin_1'))
+            chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1') +
+            chr(byte7).encode('latin_1'))
         # print("Duration for serial port write " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
         # self.serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()

@@ -282,20 +282,23 @@ class MyGUI(QMainWindow):
                     if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 50):  # 0 <-> 250
                         starttime_serial_send = time.time_ns()
                         if ids != "ALL":
-                            self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), self.velocitySlider.value())
-                            self.label_3.setText(
-                                "Last sent message:\n\n" + f"Channel: {ids}\n" + f"Picture Nr.: {picture}\n" +
-                                f"Brightness: {self.brightnessSlider.value()}\n\n")
+                            self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
                         else:
                             # Broadcast to all receivers
                             for ids in receiver_ids:
-                                self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), self.velocitySlider.value())
-                            self.label_3.setText(
-                                "Last sent message:\n\n" + "Channel: ALL\n" + f"Picture Nr.: {picture}\n" +
-                                f"Brightness: {self.brightnessSlider.value()} \n\n")
+                                self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
                         # print("Duration for serial_send: " + str(
                         # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
                         # set marker sent_status "True"
+                        self.label_3.setText(
+                            "Last sent message:\n\n"
+                            + f"Channel: {ids}\n"
+                            + f"Picture Nr.: {picture}\n"
+                            + f"Color/Hue.: {color}\n"
+                            + f"Saturation.: {saturation}\n"
+                            + f"Brightness: {self.brightnessSlider.value()}\n"
+                            + f"Velocity.: {velocity}\n"
+                              f"\n\n")
                         r[-1] = "True"
                         self.paint_status_green(index)  # used to be time problematic !
                 index += 1
