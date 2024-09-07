@@ -24,8 +24,8 @@ class MarkerList:
         self.List = backup_details
         self.f.close()
 
-    def add_marker(self, number, time_stamp, ID, picture, send_status):
-        self.List.append([number, time_stamp, ID, picture, send_status])
+    def add_marker(self, number, time_stamp, ID, mode, picture, color, velocity, send_status):
+        self.List.append([number, time_stamp, ID, mode, picture, color, velocity, send_status])
         self.update_backup_file()
 
     def update_backup_file(self):
@@ -40,7 +40,7 @@ class MarkerList:
         output = ""
         if len(self.List) > 0:
             for x in self.List:
-                output += f"\nMarker {x[0]} - Time: {x[1]} - ID {x[2]} - Picture: {x[3]} - Status Sent: {x[4]}"
+                output += f"\nMarker {x[0]} - Time: {x[1]} - ID {x[2]} - Mode {x[3]} - Picture: {x[4]} - Color {x[5]} - Velocity {x[6]}- Status Sent: {x[7]}"
         return output
 
     def delete_last(self):
@@ -53,7 +53,7 @@ class MarkerList:
 
     def reset_send_status_all(self):
         for x in self.List:
-            x[4] = "False"
+            x[-1] = "False"
 
     def get_marker(self):
         return self.List
