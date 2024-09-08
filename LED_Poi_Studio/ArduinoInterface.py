@@ -59,7 +59,7 @@ class ArduinoInterface:
         # self.serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()
 
-        if self.serialPort.in_waiting > 60: # 3.69_ -> 5 byte -> *6 (Pois) * 2 (Signal Strength) = 60
+        if self.serialPort.in_waiting > 30: # 3.69_ -> 5 byte -> *6 (Pois) * 2 (Signal Strength) = 60
             # Read data out of the buffer until a carriage return / new line is found
             bytearray = self.serialPort.readline()
             res = str(bytearray.decode("Ascii"))
@@ -81,3 +81,6 @@ class ArduinoInterface:
         # except:
         #     print("Error")
         #     pass
+
+    def signal_strength_test(self):
+        self.send(3, 0, 0, 0, 0, 0, 0)

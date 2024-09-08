@@ -38,6 +38,7 @@ class MyGUI(QMainWindow):
 
     def __init__(self):
         super(MyGUI, self).__init__()
+        self.stop_watch_start = 0
         self.audio_time = None
         self.audio_signal = None
         self.cursor = None
@@ -66,16 +67,20 @@ class MyGUI(QMainWindow):
         self.pushButton_5.clicked.connect(self.save_serial_config)
         self.pushButton_6.clicked.connect(self.open_audio_file)
         self.pushButton_7.clicked.connect(self.set_marker_off)
+        self.testButton.clicked.connect(self.send_test_button_data)
+        self.offButton.clicked.connect(self.arduino.go_all_black)
+        self.signalTestButton.clicked.connect(self.arduino.signal_strength_test)
         self.exit_Button.clicked.connect(self.exit)
         self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
         self.open_audio_file(1)  # 1 = default file (audio_file_path)
         self.cursor_position = 0 # seconds in float
-        self.create_infos_table()
+        self.create_info_table()
         # mouse click
         self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
         self.waveform_widget.scene().sigMouseClicked.connect(self.mouse_clicked_play_cursor)
         self.music_startpoint_offset = 0
+        self.time_stamp = 0;
 
     def mouse_moved(self, evt):
         vb = self.waveform_widget.plotItem.vb
@@ -169,37 +174,39 @@ class MyGUI(QMainWindow):
         timer_info_table = QtCore.QTimer()
         timer_info_table.timeout.connect(self.update_info_table)
         timer_info_table.start(250)
-        timer_send = QtCore.QTimer()
-        timer_send.timeout.connect(self.send_marker)
-        timer_send.start(1)
+        #timer_send = QtCore.QTimer()
+        #timer_send.timeout.connect(self.send_marker)
+        #timer_send.start(1)
         self.start_animation()
 
     def refresh_marker_table(self):
         print("Refresh Table")
-        #self.table1.clear()
+        # self.table1.clear()
         self.table1.setRowCount(len(self.marker_list.List))
         row_counter = 0
+        # Update color of status and background color of color column
         for rows in self.marker_list.List:
             item_counter = 0
             for items in rows:
-                # print(items)
-                widget = QtWidgets.QTableWidgetItem(items)
-                # Color for Status False (Red) and True (Green)
+                widget = QtWidgets.QTableWidgetItem(str(items))
+                # Status Background
                 if items == "False":
                     widget.setBackground(QColor(220, 20, 0))
                 elif items == "True":
                     widget.setBackground(QColor(20, 220, 0))
-                self.table1.setItem(row_counter, item_counter, widget)
-                if item_counter == 5:
+                # Color Background
+                if item_counter == 5 and int(items) != 0:
                     r, g, b = colorsys.hsv_to_rgb(int(items) / 255, 1, 1)
-                    widget.setBackground(QColor(int(r * 255), int(g * 255),int(b * 255), 100))
-                    self.table1.setItem(row_counter, item_counter, widget)
+                    widget.setBackground(QColor(int(r * 255), int(g * 255), int(b * 255), 100))
+
+                self.table1.setItem(row_counter, item_counter, widget)
+
                 item_counter = item_counter + 1
             row_counter = row_counter + 1
         # Tweak to update
         self.table1.setRowCount(len(self.marker_list.List) + 1)
 
-    def create_infos_table(self):
+    def create_info_table(self):
         self.tableWidget.setRowCount(len(receiver_ids))
         for r in range(len(receiver_ids)):
             self.tableWidget.setItem(r, 0, QtWidgets.QTableWidgetItem("LED Poi " + str(r + 1)))
@@ -241,6 +248,7 @@ class MyGUI(QMainWindow):
         # Start - Running
         else:
             self.running = True
+            self.stop_watch_start = time.perf_counter()
             self.pushButton.setText("Stop")
             # self.pushButton_2.setEnabled(False)
             # threading.Thread(target=self.stopwatch).start()
@@ -248,7 +256,7 @@ class MyGUI(QMainWindow):
             if self.checkBox.isChecked():
                 # Check for next marker to be sent
                 print("Thread send marker started")
-                # threading.Thread(target=self.send_marker).start()
+                threading.Thread(target=self.send_marker).start()
             # Play Music
             if self.paused:
                 mixer.music.unpause()
@@ -262,48 +270,83 @@ class MyGUI(QMainWindow):
     def send_marker(self):
         if self.checkBox.isChecked() and self.running:
             list_m = self.marker_list.get_marker()
-            # while self.running: # no more thread used
-            starttime = time.time_ns()
-            # rows -> markers
-            index = 0
-            for r in list_m:
-                ids = r[2]
-                mode = int(r[3])
-                picture = int(r[4])
-                color = int(r[5])
-                velocity = int(r[6])
-                send_status = r[-1]
+            while self.running: # no more thread used
+                print(f"time.time_ns: {time.time_ns()}\n")
+                print(f"time.perf_counter. {time.perf_counter()}\n")
+                print(f"mixer.music.get_pos: {mixer.music.get_pos()}\n")
+                print(f"time.perf_counter - starttime {time.perf_counter() - self.stop_watch_start}\n")
+                starttime = time.time_ns()
+                # rows -> markers
+                index = 0
+                for r in list_m:
+                    ids = r[2]
+                    mode = int(r[3])
+                    picture = int(r[4])
+                    color = int(r[5])
+                    velocity = int(r[6])
+                    send_status = r[-1]
 
-                if send_status == "False":
-                    # decrypt time
-                    ms = int(r[1][10]) * 10 + int(r[1][9]) * 100 + int(r[1][7]) * 1000 + int(r[1][6]) * 10000 + int(
-                        r[1][4]) * 60 * 1000
-                    # Not send marker if older than 250ms
-                    if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 50):  # 0 <-> 250
-                        starttime_serial_send = time.time_ns()
-                        if ids != "ALL":
-                            self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
-                        else:
-                            # Broadcast to all receivers
-                            for ids in receiver_ids:
+                    if send_status == "False":
+                        # decrypt time
+                        ms = self.marker_list.get_marker_time_ms(r)
+                        # Not send marker if older than 30 ms -> somehow program gets interrupted sometimes for up to 24 ms
+                        if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 30):  # 0 <-> 250
+                            # starttime_serial_send = time.time_ns()
+                            if ids != "ALL":
                                 self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
-                        # print("Duration for serial_send: " + str(
-                        # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
-                        # set marker sent_status "True"
-                        self.label_3.setText(
-                            "Last sent message:\n\n"
-                            + f"Channel: {ids}\n"
-                            + f"Picture Nr.: {picture}\n"
-                            + f"Color/Hue.: {color}\n"
-                            + f"Saturation.: {saturation}\n"
-                            + f"Brightness: {self.brightnessSlider.value()}\n"
-                            + f"Velocity.: {velocity}\n"
-                              f"\n\n")
-                        r[-1] = "True"
-                        self.paint_status_green(index)  # used to be time problematic !
-                index += 1
-            # time.sleep(0.001)
-            # print("Duration for Thread send_marker: " + str((time.time_ns() - starttime) / 1000000) + " ms")
+                            else:
+                                # Broadcast to all receivers
+                                for ids in receiver_ids:
+                                    self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
+                            # print("Duration for serial_send: " + str(
+                            # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
+                            # set marker sent_status "True"
+                            self.label_3.setText(
+                                "Last sent message:\n\n"
+                                + f"Channel: {ids}\n"
+                                + f"Picture Nr.: {picture}\n"
+                                + f"Color/Hue.: {color}\n"
+                                + f"Saturation.: {saturation}\n"
+                                + f"Brightness: {self.brightnessSlider.value()}\n"
+                                + f"Velocity.: {velocity}\n"
+                                  f"\n\n")
+                            r[-1] = "True"
+                            self.paint_status_green(index)  # used to be time problematic !
+                    index += 1
+                # time.sleep(0.001)
+                # print(f"Duration for Thread send_marker: {(time.time_ns() - starttime) / 1000} us")
+                #print(starttime)
+                #print(time.time_ns() / 1000000 - self.time_stamp)
+                #self.time_stamp = time.time_ns() / 1000000
+
+    def send_test_button_data(self):
+        mode_t = 0
+        saturation = 255
+        ids = self.comboBox.currentText()
+        if self.spinBox.value() == 0:
+            mode_t = COLOR_MODE
+        else:
+            mode_t = PICTURE_MODE
+
+        if ids != "ALL":
+            self.arduino.send(mode_t, int(self.comboBox.currentText()), self.spinBox.value(), self.colorSlider.value(), saturation , self.brightnessSlider.value(), self.velocitySlider.value())
+        else:
+            # Broadcast to all receivers
+            for ids in range(6):
+                self.arduino.send(mode_t, ids + 1, self.spinBox.value(), self.colorSlider.value(), saturation, self.brightnessSlider.value(), self.velocitySlider.value())
+
+        self.label_3.setText(
+            "Last sent message:\n\n"
+            + f"Channel: {ids}\n"
+            + f"Picture Nr.: {self.spinBox.value()}\n"
+            + f"Color/Hue.: {self.colorSlider.value()}\n"
+            + f"Saturation.: {saturation}\n"
+            + f"Brightness: {self.brightnessSlider.value()}\n"
+            + f"Velocity.: { self.velocitySlider.value()}\n"
+              f"\n\n")
+
+    # def send_all_off_data(self):
+
 
     def reset(self):
         self.pushButton.setText("Start")
@@ -311,6 +354,7 @@ class MyGUI(QMainWindow):
         self.label.setText("00:00:00:00")
         mixer.music.stop()
         self.paused = False
+        self.running = False
         print("Music stop")
         self.marker_list.reset_send_status_all()
         self.passed = 0
@@ -356,12 +400,14 @@ class MyGUI(QMainWindow):
             self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen='b')  # delete marker from plot
             self.lst_markers_plt_h.pop(index)
             self.refresh_marker_table()
+            self.current_index -= 1
+
 
     def format_time_string(self, time_passed):
         secs = time_passed % 60
         mins = time_passed // 60
         hours = mins // 60
-        return f"{int(hours):02d}:{int(mins):02d}:{int(secs):02d}:{int((self.passed % 1) * 100):02d}"
+        return f"{int(hours):02d}:{int(mins):02d}:{int(secs):02d}:{int((self.passed % 1) * 1000):03d}"
 
     def clock(self):
         self.passed = mixer.music.get_pos() / 1000.0 + self.music_startpoint_offset
@@ -387,7 +433,7 @@ class MyGUI(QMainWindow):
 def main():
     mixer.init()
     app = QApplication([])
-    cProfile.run('MyGUI()', 'PROFILE.txt')
+    # cProfile.run('MyGUI()', 'PROFILE.txt')
     window = MyGUI()
     mixer.music.load(window.sound_file)
     window.animation()
