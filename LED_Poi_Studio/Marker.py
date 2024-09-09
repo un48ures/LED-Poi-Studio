@@ -68,9 +68,9 @@ class MarkerList:
                 ms = 0
         return ms
 
-    def get_marker_time_ms(self, m):
-        ms = int(m[1][10]) * 10 + int(m[1][9]) * 100 + int(m[1][7]) * 1000 + int(m[1][6]) * 10000 + int(
-            m[1][4]) * 60 * 1000
+    def get_marker_time_ms(self, marker):
+        ms = int(marker[1][10]) * 10 + int(marker[1][9]) * 100 + int(marker[1][7]) * 1000 + int(marker[1][6]) * 10000 + int(
+            marker[1][4]) * 60 * 1000
         if ms < 0 or ms > 1200000:  # 20 min
             ms = 0
         return ms
@@ -89,20 +89,33 @@ class MarkerList:
             return 0
 
     def delete_next_marker_to_time_ms(self, time):
-        tmp = 10**9 # 10^6 s -> 16666 min
-        count = 0
-        target = 0
+        target_index, target_time = self.find_nearest_to_time(time)
+        if target_index > -1:
+            self.List.pop(target_index)
+            self.update_backup_file()
+        return target_index
+
+    def find_before_after_to_time(self, time_ms):
+        index = 0
+        before = 0
+        after = 0
         if len(self.List) > 0:
             for m in self.List:
-                print("Time: " + str(time) + " Time of Marker " + str(count) + " is " + str(self.get_marker_time_ms(m)) + " and time difference is: " + str(abs(time - self.get_marker_time_ms(m))))
-                if abs(time - self.get_marker_time_ms(m)) < tmp:
-                    tmp = abs(time - self.get_marker_time_ms(m))
-                    target = count
+                pass
+
+    def find_nearest_to_time(self, time_ms):
+        tmp = 10 ** 9  # 10^6 s -> 16666 min
+        count = 0
+        target_index = -1
+        target_time = -1
+        if len(self.List) > 0:
+            for m in self.List:
+                # print("Time: " + str(time_ms) + " Time of Marker " + str(count) + " is " + str(self.get_marker_time_ms(m)) + " and time difference is: " + str(abs(time_ms - self.get_marker_time_ms(m))))
+                if abs(time_ms - self.get_marker_time_ms(m)) < tmp:
+                    tmp = abs(time_ms - self.get_marker_time_ms(m))
+                    target_index = count
+                    target_time = self.get_marker_time_ms(m)
                 count += 1
-            print(target)
-            self.List.pop(target)
-            self.update_backup_file()
-            return target
-        else:
-            return -1
+        return target_index, target_time
+
 

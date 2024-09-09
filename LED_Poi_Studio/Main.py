@@ -1,6 +1,8 @@
+import multiprocessing
 import sys
 import time
 import threading
+from multiprocessing import Process
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import *
@@ -23,7 +25,7 @@ dirname = os.path.dirname(__file__)
 ui_file = dirname + '/Studio_GUI.ui'
 default_audio_file_path = dirname + '/Syren.mp3'
 
-REDUCTION_FACTOR = 4 # Audio Sample reduction factor - plot
+REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
 
 receiver_ids = [1, 2, 3, 4, 5, 6]
 mode = 2  # when this program is used automatically Picture Mode (2) is used
@@ -33,11 +35,24 @@ velocity = 0  # unused
 COLOR_MODE = 1
 PICTURE_MODE = 2
 
+p_flag = True
+
+def time_printer():
+    old_time = 0
+    while True:
+        if p_flag and (old_time != time.time_ns()):
+            # do something
+            print(time.time_ns() / 1000000)
+            old_time = time.time_ns()
+        else:
+            pass
+        # time.sleep(0.0001)
 
 class MyGUI(QMainWindow):
 
     def __init__(self):
         super(MyGUI, self).__init__()
+        self.cursor_position = 0  # seconds in float
         self.stop_watch_start = 0
         self.audio_time = None
         self.audio_signal = None
@@ -74,13 +89,17 @@ class MyGUI(QMainWindow):
         self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
         self.open_audio_file(1)  # 1 = default file (audio_file_path)
-        self.cursor_position = 0 # seconds in float
         self.create_info_table()
         # mouse click
         self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
         self.waveform_widget.scene().sigMouseClicked.connect(self.mouse_clicked_play_cursor)
         self.music_startpoint_offset = 0
-        self.time_stamp = 0;
+        self.time_stamp = 0
+        # self.table1.cellChanged.connect(self.on_cell_changed)
+
+    def on_cell_changed(self, row, column):
+        self.marker_list.List[row][column] = self.table1.item(row, column).text()
+        print(f"self.marker_list.List[{row}][{column}] is now: {self.table1.item(row, column).text()}")
 
     def mouse_moved(self, evt):
         vb = self.waveform_widget.plotItem.vb
@@ -93,7 +112,7 @@ class MyGUI(QMainWindow):
         scene_coords = evt.scenePos()
         if self.waveform_widget.sceneBoundingRect().contains(scene_coords):
             mouse_point = vb.mapSceneToView(scene_coords)
-            print(f'clicked plot X: {mouse_point.x()}, Y: {mouse_point.y()}, event: {evt}')
+            # print(f'clicked plot X: {mouse_point.x()}, Y: {mouse_point.y()}, event: {evt}')
             mixer.music.stop()
             mixer.music.play()
             mixer.music.set_pos(mouse_point.x())
@@ -104,7 +123,6 @@ class MyGUI(QMainWindow):
 
             # reset all markers to "False"
             self.marker_list.reset_send_status_all()
-
 
     def open_audio_file(self, default):
         if default != 1:
@@ -146,18 +164,22 @@ class MyGUI(QMainWindow):
 
     def update_cursor_plot_data(self):
         self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
-        self.cursor.setData([ self.cursor_position,  self.cursor_position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
+        self.cursor.setData([self.cursor_position, self.cursor_position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
 
     def update_marker_plot_data(self):
-        # Marker
+        # Find nearest marker
+        next_marker, next_marker_time_ms = self.marker_list.find_nearest_to_time(self.cursor_position * 1000)
         for index in range(len(self.marker_list.List)):
             m_pos = self.marker_list.get_marker_time_ms_by_index(index) / 1000  # marker
             if m_pos > 0:
-                # self.first_marker.setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
-                self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen='b')
+                if index == next_marker:  # mark the nearest marker orange
+                    pen = pg.mkPen('g', width=2)
+                else:
+                    pen = pg.mkPen('b', width=1)
+                self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen=pen)
                 pass
             else:
-                self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen='b')
+                self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen=pg.mkPen('b', width=1))
                 pass
 
     def start_animation(self):
@@ -170,13 +192,13 @@ class MyGUI(QMainWindow):
         timer_cursor.start(25)
         timer_clock = QtCore.QTimer()
         timer_clock.timeout.connect(self.clock)
-        timer_clock.start(10)
+        timer_clock.start(20)
         timer_info_table = QtCore.QTimer()
-        timer_info_table.timeout.connect(self.update_info_table)
+        timer_info_table.timeout.connect(self.update_gui_slow)
         timer_info_table.start(250)
         #timer_send = QtCore.QTimer()
         #timer_send.timeout.connect(self.send_marker)
-        #timer_send.start(1)
+        #timer_send.start(10)
         self.start_animation()
 
     def refresh_marker_table(self):
@@ -213,20 +235,29 @@ class MyGUI(QMainWindow):
             self.tableWidget.setItem(r, 1, QtWidgets.QTableWidgetItem(str(self.arduino.voltages[r]) + " V"))
             self.tableWidget.setItem(r, 2, QtWidgets.QTableWidgetItem(str(self.arduino.signal_strength[r]) + " %"))
 
-    def update_info_table(self):
+    def update_gui_slow(self):
+        # Info table with voltages and signal strength
         for r in range(len(receiver_ids)):
             item = self.tableWidget.item(r, 1)
             item.setText(str(self.arduino.voltages[r]) + " V")
             item = self.tableWidget.item(r, 2)
             item.setText(str(self.arduino.signal_strength[r]) + " %")
-        self.label_brightness.setText(str(self.brightnessSlider.value())) # update brightness slider label
+
+        # Update brightness slider label
+        self.label_brightness.setText(str(self.brightnessSlider.value()))
         self.label_color.setText(str(self.colorSlider.value()))
         r, g, b = colorsys.hsv_to_rgb(self.colorSlider.value() / 255, 1, 1)
-        self.label_color.setStyleSheet("background-color: rgb(" + str(r * 255) + ", " + str(g * 255) + ", " + str(b * 255) + ")")
-        self.label_velocity.setText(str(self.velocitySlider.value()) + " ms")  # update brightness slider label
+        self.label_color.setStyleSheet(
+            "background-color: rgb(" + str(r * 255) + ", " + str(g * 255) + ", " + str(b * 255) + ")")
+
+        # update velocity slider label
+        self.label_velocity.setText(str(self.velocitySlider.value()) + " ms")
+
+        # Update markers in plot
+        self.update_marker_plot_data()
 
     # Refresh status in table from false to true
-    def paint_status_green(self, row_index):
+    def paint_status_in_table_green(self, row_index):
         self.table1.setRowCount(len(self.marker_list.List))
         # Color for Status False (Red) and True (Green)
         status = self.marker_list.List[int(row_index)][7]
@@ -250,13 +281,14 @@ class MyGUI(QMainWindow):
             self.running = True
             self.stop_watch_start = time.perf_counter()
             self.pushButton.setText("Stop")
-            # self.pushButton_2.setEnabled(False)
             # threading.Thread(target=self.stopwatch).start()
             print(self.checkBox.isChecked())
             if self.checkBox.isChecked():
                 # Check for next marker to be sent
                 print("Thread send marker started")
                 threading.Thread(target=self.send_marker).start()
+                # proc = Process(target=self.send_marker)
+                # proc.start()
             # Play Music
             if self.paused:
                 mixer.music.unpause()
@@ -268,56 +300,63 @@ class MyGUI(QMainWindow):
                 print("Music Play")
 
     def send_marker(self):
+        old_mixer_pos = 0
         if self.checkBox.isChecked() and self.running:
             list_m = self.marker_list.get_marker()
-            while self.running: # no more thread used
-                print(f"time.time_ns: {time.time_ns()}\n")
-                print(f"time.perf_counter. {time.perf_counter()}\n")
-                print(f"mixer.music.get_pos: {mixer.music.get_pos()}\n")
-                print(f"time.perf_counter - starttime {time.perf_counter() - self.stop_watch_start}\n")
-                starttime = time.time_ns()
-                # rows -> markers
-                index = 0
-                for r in list_m:
-                    ids = r[2]
-                    mode = int(r[3])
-                    picture = int(r[4])
-                    color = int(r[5])
-                    velocity = int(r[6])
-                    send_status = r[-1]
+            while self.running:  # no more thread used
+                if old_mixer_pos != mixer.music.get_pos():
+                    # print(f"time.time_ns: {time.time_ns()}\n")
+                    # print(f"time.perf_counter. {time.perf_counter() * 1000}\n")
+                    print(f"mixer.music.get_pos: {mixer.music.get_pos()}\n")
+                    # print(f"time.perf_counter - starttime {time.perf_counter() - self.stop_watch_start}\n")
+                    starttime = time.time_ns()
+                    # rows -> markers
+                    index = 0
+                    for r in list_m:
+                        ids = r[2]
+                        mode = int(r[3])
+                        picture = int(r[4])
+                        color = int(r[5])
+                        velocity = int(r[6])
+                        send_status = r[-1]
 
-                    if send_status == "False":
-                        # decrypt time
-                        ms = self.marker_list.get_marker_time_ms(r)
-                        # Not send marker if older than 30 ms -> somehow program gets interrupted sometimes for up to 24 ms
-                        if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 30):  # 0 <-> 250
-                            # starttime_serial_send = time.time_ns()
-                            if ids != "ALL":
-                                self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
-                            else:
-                                # Broadcast to all receivers
-                                for ids in receiver_ids:
-                                    self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(), velocity)
-                            # print("Duration for serial_send: " + str(
-                            # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
-                            # set marker sent_status "True"
-                            self.label_3.setText(
-                                "Last sent message:\n\n"
-                                + f"Channel: {ids}\n"
-                                + f"Picture Nr.: {picture}\n"
-                                + f"Color/Hue.: {color}\n"
-                                + f"Saturation.: {saturation}\n"
-                                + f"Brightness: {self.brightnessSlider.value()}\n"
-                                + f"Velocity.: {velocity}\n"
-                                  f"\n\n")
-                            r[-1] = "True"
-                            self.paint_status_green(index)  # used to be time problematic !
-                    index += 1
+                        if send_status == "False":
+                            # decrypt time
+                            ms = self.marker_list.get_marker_time_ms(r)
+                            # Not send marker if older than 30 ms -> somehow program gets interrupted sometimes for up to 24 ms
+                            if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 30):  # 0 <-> 250
+                                # starttime_serial_send = time.time_ns()
+                                if ids != "ALL":
+                                    self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(),
+                                                      velocity)
+                                else:
+                                    # Broadcast to all receivers
+                                    for ids in receiver_ids:
+                                        self.arduino.send(mode, ids, picture, color, saturation,
+                                                          self.brightnessSlider.value(), velocity)
+                                # print("Duration for serial_send: " + str(
+                                # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
+                                # set marker sent_status "True"
+                                self.label_3.setText(
+                                    "Last sent message:\n\n"
+                                    + f"Channel: {ids}\n"
+                                    + f"Picture Nr.: {picture}\n"
+                                    + f"Color/Hue.: {color}\n"
+                                    + f"Saturation.: {saturation}\n"
+                                    + f"Brightness: {self.brightnessSlider.value()}\n"
+                                    + f"Velocity.: {velocity}\n"
+                                      f"\n\n")
+                                r[-1] = "True"
+                                self.paint_status_in_table_green(index)  # used to be time problematic !
+                        index += 1
+                    old_mixer_pos = mixer.music.get_pos()
+                else:
+                    time.sleep(0.001)
                 # time.sleep(0.001)
                 # print(f"Duration for Thread send_marker: {(time.time_ns() - starttime) / 1000} us")
-                #print(starttime)
-                #print(time.time_ns() / 1000000 - self.time_stamp)
-                #self.time_stamp = time.time_ns() / 1000000
+                # print(starttime)
+                # print(time.time_ns() / 1000000 - self.time_stamp)
+                # self.time_stamp = time.time_ns() / 1000000
 
     def send_test_button_data(self):
         mode_t = 0
@@ -329,11 +368,13 @@ class MyGUI(QMainWindow):
             mode_t = PICTURE_MODE
 
         if ids != "ALL":
-            self.arduino.send(mode_t, int(self.comboBox.currentText()), self.spinBox.value(), self.colorSlider.value(), saturation , self.brightnessSlider.value(), self.velocitySlider.value())
+            self.arduino.send(mode_t, int(self.comboBox.currentText()), self.spinBox.value(), self.colorSlider.value(),
+                              saturation, self.brightnessSlider.value(), self.velocitySlider.value())
         else:
             # Broadcast to all receivers
             for ids in range(6):
-                self.arduino.send(mode_t, ids + 1, self.spinBox.value(), self.colorSlider.value(), saturation, self.brightnessSlider.value(), self.velocitySlider.value())
+                self.arduino.send(mode_t, ids + 1, self.spinBox.value(), self.colorSlider.value(), saturation,
+                                  self.brightnessSlider.value(), self.velocitySlider.value())
 
         self.label_3.setText(
             "Last sent message:\n\n"
@@ -342,11 +383,10 @@ class MyGUI(QMainWindow):
             + f"Color/Hue.: {self.colorSlider.value()}\n"
             + f"Saturation.: {saturation}\n"
             + f"Brightness: {self.brightnessSlider.value()}\n"
-            + f"Velocity.: { self.velocitySlider.value()}\n"
+            + f"Velocity.: {self.velocitySlider.value()}\n"
               f"\n\n")
 
     # def send_all_off_data(self):
-
 
     def reset(self):
         self.pushButton.setText("Start")
@@ -367,7 +407,7 @@ class MyGUI(QMainWindow):
     def set_marker_picture(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
                                     self.comboBox.currentText(), PICTURE_MODE,
-                                    self.spinBox.value(), 0, self.velocitySlider.value(),  False)
+                                    self.spinBox.value(), 0, self.velocitySlider.value(), False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
         self.refresh_marker_table()
@@ -376,17 +416,16 @@ class MyGUI(QMainWindow):
     def set_marker_color(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
                                     self.comboBox.currentText(), COLOR_MODE,
-                                    0, self.colorSlider.value(), 0,  False)
+                                    0, self.colorSlider.value(), 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
         self.refresh_marker_table()
         self.current_index += 1
 
-
     def set_marker_off(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
                                     self.comboBox.currentText(), PICTURE_MODE,
-                                    0, 0, 0,  False)
+                                    0, 0, 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
         self.refresh_marker_table()
@@ -401,7 +440,6 @@ class MyGUI(QMainWindow):
             self.lst_markers_plt_h.pop(index)
             self.refresh_marker_table()
             self.current_index -= 1
-
 
     def format_time_string(self, time_passed):
         secs = time_passed % 60
@@ -427,10 +465,9 @@ class MyGUI(QMainWindow):
         sys.exit()
 
 
-
-
-
 def main():
+    # p = Process(target=time_printer)
+    # p.start()
     mixer.init()
     app = QApplication([])
     # cProfile.run('MyGUI()', 'PROFILE.txt')
