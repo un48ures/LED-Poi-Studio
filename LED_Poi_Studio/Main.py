@@ -20,9 +20,23 @@ from AudioConverter import AudioConverter
 import pyqtgraph as pg
 import colorsys
 
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller."""
+    try:
+        # PyInstaller creates a temp folder and stores the temp path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # If not running as a bundled executable
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+
 dirname = os.path.dirname(__file__)
 
-ui_file = dirname + '/Studio_GUI.ui'
+# ui_file = dirname + '/Studio_GUI.ui'
+ui_file = resource_path('Studio_GUI.ui')
 default_audio_file_path = dirname + '/Syren.mp3'
 
 REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
@@ -37,6 +51,7 @@ PICTURE_MODE = 2
 
 p_flag = True
 
+
 def time_printer():
     old_time = 0
     while True:
@@ -47,6 +62,7 @@ def time_printer():
         else:
             pass
         # time.sleep(0.0001)
+
 
 class MyGUI(QMainWindow):
 
@@ -88,7 +104,7 @@ class MyGUI(QMainWindow):
         self.exit_Button.clicked.connect(self.exit)
         self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
-        self.open_audio_file(1)  # 1 = default file (audio_file_path)
+        # self.open_audio_file(1)  # 1 = default file (audio_file_path)
         self.create_info_table()
         # mouse click
         self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
@@ -128,11 +144,15 @@ class MyGUI(QMainWindow):
         if default != 1:
             file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3 *.wav *.aac *.ogg)")
             self.sound_file = file_info[0]
-        mixer.music.load(self.sound_file)
-        self.label_4.setText(self.sound_file)
-        self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
-        self.waveform_widget.clear()
-        self.plot_waveform()
+        try:
+            mixer.music.load(self.sound_file)
+            self.label_4.setText(self.sound_file)
+            self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
+            self.waveform_widget.clear()
+            self.plot_waveform()
+        except:
+            pass
+
 
     def reduce_samples(self, factor):
         signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
@@ -163,24 +183,25 @@ class MyGUI(QMainWindow):
         print(f"Plotting waveform finisehd after {duration} s.")
 
     def update_cursor_plot_data(self):
-        self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
-        self.cursor.setData([self.cursor_position, self.cursor_position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
+        if self.cursor is not None:
+            self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
+            self.cursor.setData([self.cursor_position, self.cursor_position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
 
     def update_marker_plot_data(self):
         # Find nearest marker
         next_marker, next_marker_time_ms = self.marker_list.find_nearest_to_time(self.cursor_position * 1000)
-        for index in range(len(self.marker_list.List)):
-            m_pos = self.marker_list.get_marker_time_ms_by_index(index) / 1000  # marker
-            if m_pos > 0:
-                if index == next_marker:  # mark the nearest marker orange
-                    pen = pg.mkPen('g', width=2)
+        if len(self.marker_list.List) > 0 and len(self.lst_markers_plt_h) > 0:
+            for index in range(len(self.marker_list.List)):
+                m_pos = self.marker_list.get_marker_time_ms_by_index(index) / 1000  # marker
+                print(self.marker_list.get_marker_time_ms_by_index(index))
+                if m_pos > 0:
+                    if index == next_marker:  # mark the nearest marker orange
+                        pen = pg.mkPen('g', width=2)
+                    else:
+                        pen = pg.mkPen('b', width=1)
+                    self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen=pen)
                 else:
-                    pen = pg.mkPen('b', width=1)
-                self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen=pen)
-                pass
-            else:
-                self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen=pg.mkPen('b', width=1))
-                pass
+                    self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen=pg.mkPen('b', width=1))
 
     def start_animation(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
@@ -196,9 +217,9 @@ class MyGUI(QMainWindow):
         timer_info_table = QtCore.QTimer()
         timer_info_table.timeout.connect(self.update_gui_slow)
         timer_info_table.start(250)
-        #timer_send = QtCore.QTimer()
-        #timer_send.timeout.connect(self.send_marker)
-        #timer_send.start(10)
+        # timer_send = QtCore.QTimer()
+        # timer_send.timeout.connect(self.send_marker)
+        # timer_send.start(10)
         self.start_animation()
 
     def refresh_marker_table(self):
@@ -324,10 +345,12 @@ class MyGUI(QMainWindow):
                             # decrypt time
                             ms = self.marker_list.get_marker_time_ms(r)
                             # Not send marker if older than 30 ms -> somehow program gets interrupted sometimes for up to 24 ms
-                            if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (ms + 30):  # 0 <-> 250
+                            if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (
+                                    ms + 30):  # 0 <-> 250
                                 # starttime_serial_send = time.time_ns()
                                 if ids != "ALL":
-                                    self.arduino.send(mode, ids, picture, color, saturation, self.brightnessSlider.value(),
+                                    self.arduino.send(mode, ids, picture, color, saturation,
+                                                      self.brightnessSlider.value(),
                                                       velocity)
                                 else:
                                     # Broadcast to all receivers
@@ -472,7 +495,7 @@ def main():
     app = QApplication([])
     # cProfile.run('MyGUI()', 'PROFILE.txt')
     window = MyGUI()
-    mixer.music.load(window.sound_file)
+    # mixer.music.load(window.sound_file)
     window.animation()
     app.exec_()
 

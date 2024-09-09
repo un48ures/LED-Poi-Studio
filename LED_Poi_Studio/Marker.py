@@ -62,8 +62,7 @@ class MarkerList:
         ms = 0
         if index < len(self.List):
             m = self.List[index]
-            ms = int(m[1][10]) * 10 + int(m[1][9]) * 100 + int(m[1][7]) * 1000 + int(m[1][6]) * 10000 + int(
-                m[1][4]) * 60 * 1000
+            ms = int(m[1][11]) + int(m[1][10]) * 10 + int(m[1][9]) * 100 + int(m[1][7]) * 1000 + int(m[1][6]) * 10000 + int(m[1][4]) * 60 * 1000
             if ms < 0 or ms > 1200000:  # 20 min
                 ms = 0
         return ms
