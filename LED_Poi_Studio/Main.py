@@ -193,7 +193,6 @@ class MyGUI(QMainWindow):
         if len(self.marker_list.List) > 0 and len(self.lst_markers_plt_h) > 0:
             for index in range(len(self.marker_list.List)):
                 m_pos = self.marker_list.get_marker_time_ms_by_index(index) / 1000  # marker
-                print(self.marker_list.get_marker_time_ms_by_index(index))
                 if m_pos > 0:
                     if index == next_marker:  # mark the nearest marker orange
                         pen = pg.mkPen('g', width=2)

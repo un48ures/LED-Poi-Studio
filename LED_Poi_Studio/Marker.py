@@ -1,13 +1,29 @@
 import os
 import os.path
+import sys
 
-dirname = os.path.dirname(__file__)
-backup_file = dirname + '/markers_backup.txt'
+
+config_name = 'markers_backup.txt'
+
+# determine if application is a script file or frozen exe
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+elif __file__:
+    application_path = os.path.dirname(__file__)
+
+config_path = os.path.join(application_path, config_name)
+
+
+backup_file = config_path
+
+
+#dirname = os.path.dirname(__file__)
+#backup_file = dirname + '/markers_backup.txt'
 
 class MarkerList:
     def __init__(self):
         self.List = []
-        if os.path.isfile(backup_file):
+        if os.path.exists(backup_file):
             print("backup file found")
             self.f = open(backup_file, "r")
         else:
