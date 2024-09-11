@@ -1,3 +1,4 @@
+import sys
 import time
 import tkinter as tk
 from tkinter import ttk
@@ -337,6 +338,10 @@ inputss6 = tk.IntVar()
 inputss6.set('0%')
 inputbox = tk.Entry(root, textvariable=inputss6, width=SignalBoxWidth)
 inputbox.grid(row=7, column=10, padx=20)
+
+def exit_program():
+    serialPort.close()
+    root.destroy
 
 # Exit Button
 buttonExit = tk.Button(root, text="Exit", command=root.destroy)

@@ -9,14 +9,16 @@ from PyQt5.QtWidgets import *
 from PyQt5.uic.properties import QtWidgets
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 import numpy as np
 from pygame import mixer
+import pygame
 import cProfile
 import pstats
 from ArduinoInterface import ArduinoInterface
 from Marker import MarkerList
-from AudioConverter import AudioConverter
+import AudioConverter
 import pyqtgraph as pg
 import colorsys
 
@@ -33,25 +35,6 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-dirname = os.path.dirname(__file__)
-
-# ui_file = dirname + '/Studio_GUI.ui'
-ui_file = resource_path('Studio_GUI.ui')
-default_audio_file_path = dirname + '/Syren.mp3'
-
-REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
-
-receiver_ids = [1, 2, 3, 4, 5, 6]
-mode = 2  # when this program is used automatically Picture Mode (2) is used
-# brightness = 10  # set fixed global brightness for testing
-saturation = 0  # unused
-velocity = 0  # unused
-COLOR_MODE = 1
-PICTURE_MODE = 2
-
-p_flag = True
-
-
 def time_printer():
     old_time = 0
     while True:
@@ -62,6 +45,129 @@ def time_printer():
         else:
             pass
         # time.sleep(0.0001)
+
+
+ui_file = resource_path('Studio_GUI.ui')
+mp3_files = AudioConverter.find_mp3_files(os.path.dirname(__file__))
+REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
+receiver_ids = [1, 2, 3, 4, 5, 6]
+COLOR_MODE = 1
+PICTURE_MODE = 2
+p_flag = True
+
+dark_theme = """
+QWidget {
+    background-color: #2b2b2b;
+    color: #ffffff;
+}
+
+/* QLabel styling */
+QLabel {
+    color: #ffffff;
+}
+
+/* Specific QLabel overrides */
+QLabel#label_3 {
+    background-color: #3b3b3b;  /* Darker grey background */
+}
+
+QLabel#label_4 {
+    background-color: #3b3b3b;  /* Darker grey background */
+}
+
+/* QPushButton styling */
+QPushButton {
+    background-color: #3b3b3b;
+    color: #ffffff;
+    border: 1px solid #5a5a5a;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #444444;
+}
+
+/* QLineEdit styling */
+QLineEdit {
+    background-color: #3b3b3b;
+    color: #ffffff;
+    border: 1px solid #5a5a5a;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+/* QTableWidget styling */
+QTableWidget {
+    background-color: #2b2b2b;
+    color: #ffffff;
+    gridline-color: #444444;
+    selection-background-color: #444444;
+    selection-color: #ffffff;
+}
+
+/* QHeaderView (row/column headers in QTableWidget) */
+QHeaderView::section {
+    background-color: #3b3b3b;
+    color: #ffffff;
+    padding: 4px;
+    border: 1px solid #5a5a5a;
+}
+
+QHeaderView::section:hover {
+    background-color: #444444;
+}
+
+/* Corner of QTableWidget (top-left box above row 1 and column 1) */
+QTableCornerButton::section {
+    background-color: #3b3b3b;
+    border: 1px solid #5a5a5a;
+}
+
+/* QTabWidget styling */
+QTabWidget::pane {
+    border: 1px solid #5a5a5a;
+    background-color: #2b2b2b;
+}
+
+QTabBar::tab {
+    background-color: #3b3b3b;
+    color: #ffffff;
+    padding: 5px;
+    border: 1px solid #5a5a5a;
+    border-bottom: none;
+}
+
+QTabBar::tab:selected {
+    background-color: #444444;
+    border-bottom: 1px solid #2b2b2b;
+}
+
+QTabBar::tab:hover {
+    background-color: #444444;
+}
+
+/* Scrollbars */
+QScrollBar:vertical {
+    background-color: #2b2b2b;
+    width: 15px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #5a5a5a;
+    min-height: 20px;
+}
+
+QScrollBar:horizontal {
+    background-color: #2b2b2b;
+    height: 15px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #5a5a5a;
+    min-width: 20px;
+}
+"""
 
 
 class MyGUI(QMainWindow):
@@ -84,11 +190,16 @@ class MyGUI(QMainWindow):
         self.previous_passed = 0
         self.paused = False
         self.plotwidget = 0
-        self.sound_file = default_audio_file_path
+        self.waveform_widget.setBackground(QColor(255, 255, 255))
+        self.waveform_widget.hideAxis('bottom')
+        self.waveform_widget.hideAxis('left')
+        self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
+        self.waveform_widget.scene().sigMouseClicked.connect(self.mouse_clicked_play_cursor)
+        self.sound_file = mp3_files[0]  # just load the first .mp3 file thats in the homedirectory
         self.arduino = ArduinoInterface(receiver_ids)
         self.arduino.find_ports()
         self.marker_list = MarkerList()
-        self.audio_converter = AudioConverter()
+        self.audio_converter = AudioConverter.AudioConverter()
         self.current_index = self.marker_list.get_highest_marker_number() + 1
         self.pushButton.clicked.connect(self.start_stop)
         self.pushButton_2.clicked.connect(self.reset)
@@ -104,14 +215,19 @@ class MyGUI(QMainWindow):
         self.exit_Button.clicked.connect(self.exit)
         self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
-        # self.open_audio_file(1)  # 1 = default file (audio_file_path)
+        self.open_audio_file(True)  # 1 = default file (audio_file_path)
         self.create_info_table()
-        # mouse click
-        self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
-        self.waveform_widget.scene().sigMouseClicked.connect(self.mouse_clicked_play_cursor)
         self.music_startpoint_offset = 0
         self.time_stamp = 0
         # self.table1.cellChanged.connect(self.on_cell_changed)
+
+    def keyPressEvent(self, event):
+        # Check if the pressed key is the spacebar
+        if event.key() == Qt.Key_Space:
+            self.on_spacebar_pressed()
+
+    def on_spacebar_pressed(self):
+        self.start_stop()
 
     def on_cell_changed(self, row, column):
         self.marker_list.List[row][column] = self.table1.item(row, column).text()
@@ -141,22 +257,25 @@ class MyGUI(QMainWindow):
             self.marker_list.reset_send_status_all()
 
     def open_audio_file(self, default):
-        if default != 1:
+        if not default:
             file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3 *.wav *.aac *.ogg)")
             self.sound_file = file_info[0]
+
         try:
             mixer.music.load(self.sound_file)
             self.label_4.setText(self.sound_file)
             self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
             self.waveform_widget.clear()
             self.plot_waveform()
-        except:
-            pass
-
+        except pygame.error as e:
+            # If loading fails, handle the error
+            print(f"Failed to load sound file '{self.sound_file}': {e}")
+            return None
 
     def reduce_samples(self, factor):
+        #  throw out every 2nd sample
         signal_red = self.audio_signal[np.mod(np.arange(self.audio_signal.size), 2) != 0]
-        # just throw out every 2nd samples for factor times
+        # again throw out every 2nd sample for x-factor times
         for x in range(factor):
             signal_red = signal_red[np.mod(np.arange(signal_red.size), 2) != 0]
         return np.arange(0, self.audio_time[-1], self.audio_time[-1] / signal_red.size), signal_red  # calc time lst
@@ -170,7 +289,10 @@ class MyGUI(QMainWindow):
         print(f"Reducing samples finisehd after {duration} s.")
         print(len(self.audio_signal))
         print(len(signal_red))
-        wf_widget_plot_handle = self.waveform_widget.plot(time_red, signal_red)
+        wf_widget_plot_handle = self.waveform_widget.plot(time_red, signal_red,
+                                                          pen=pg.mkPen(QColor(116, 173, 158), width=1))
+        self.waveform_widget.setBackground(QColor(48, 74, 67))
+        self.waveform_widget.showAxis('bottom')
         # wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
         self.cursor = self.waveform_widget.plot([0, 0], [0, 0], pen=pg.mkPen('r', width=1))
         # Marker Plot Handle
@@ -229,16 +351,22 @@ class MyGUI(QMainWindow):
         # Update color of status and background color of color column
         for rows in self.marker_list.List:
             item_counter = 0
-            for items in rows:
-                widget = QtWidgets.QTableWidgetItem(str(items))
+            for item in rows:
+                widget = QtWidgets.QTableWidgetItem(str(item))
+                # "Color" for mode 1 and "Picture" for mode 2
+                if item_counter == 3:
+                    if item == '1':
+                        widget = QtWidgets.QTableWidgetItem('Color')
+                    if item == '2':
+                        widget = QtWidgets.QTableWidgetItem('Picture')
                 # Status Background
-                if items == "False":
-                    widget.setBackground(QColor(220, 20, 0))
-                elif items == "True":
-                    widget.setBackground(QColor(20, 220, 0))
-                # Color Background
-                if item_counter == 5 and int(items) != 0:
-                    r, g, b = colorsys.hsv_to_rgb(int(items) / 255, 1, 1)
+                if item == "False":
+                    widget.setBackground(QColor(189, 31, 0))
+                elif item == "True":
+                    widget.setBackground(QColor(0, 176, 47))
+                # Color column - Background as value
+                if item_counter == 5 and int(item) != 0:
+                    r, g, b = colorsys.hsv_to_rgb(int(item) / 255, 1, 1)
                     widget.setBackground(QColor(int(r * 255), int(g * 255), int(b * 255), 100))
 
                 self.table1.setItem(row_counter, item_counter, widget)
@@ -283,7 +411,7 @@ class MyGUI(QMainWindow):
         status = self.marker_list.List[int(row_index)][7]
         if status == "True":
             widget = QtWidgets.QTableWidgetItem(status)
-            widget.setBackground(QColor(0, 255, 0))
+            widget.setBackground(QColor(0, 176, 47))
             self.table1.setItem(int(row_index), 7, widget)
         # Tweak to update
         self.table1.setRowCount(len(self.marker_list.List) + 1)
@@ -339,6 +467,7 @@ class MyGUI(QMainWindow):
                         color = int(r[5])
                         velocity = int(r[6])
                         send_status = r[-1]
+                        saturation = 0
 
                         if send_status == "False":
                             # decrypt time
@@ -423,7 +552,7 @@ class MyGUI(QMainWindow):
         self.music_startpoint_offset = 0
         # Make all LEDs go black
         for ids in receiver_ids:
-            self.arduino.send(mode, ids, 0, 0, saturation, 0, velocity)
+            self.arduino.send(2, ids, 0, 0, 0, 0, 0)
         self.refresh_marker_table()
 
     def set_marker_picture(self):
@@ -492,8 +621,10 @@ def main():
     # p.start()
     mixer.init()
     app = QApplication([])
-    # cProfile.run('MyGUI()', 'PROFILE.txt')
     window = MyGUI()
+    # Apply the dark theme stylesheet
+    app.setStyleSheet(dark_theme)
+    # cProfile.run('MyGUI()', 'PROFILE.txt')
     # mixer.music.load(window.sound_file)
     window.animation()
     app.exec_()

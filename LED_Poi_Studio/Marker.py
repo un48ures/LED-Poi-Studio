@@ -3,7 +3,7 @@ import os.path
 import sys
 
 
-config_name = 'markers_backup.txt'
+config_name = 'projectFile.txt'
 
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
@@ -34,10 +34,10 @@ class MarkerList:
     def reload_backup(self):
         self.f = open(backup_file, "r")
         str_input = self.f.read()
-        backup_details = []
-        [backup_details.append(b.split()) for b in str_input.splitlines()]
-        print(backup_details)
-        self.List = backup_details
+        backup_data = []
+        [backup_data.append(b.split()) for b in str_input.splitlines()]
+        print(backup_data)
+        self.List = backup_data
         self.f.close()
 
     def add_marker(self, number, time_stamp, ID, mode, picture, color, velocity, send_status):

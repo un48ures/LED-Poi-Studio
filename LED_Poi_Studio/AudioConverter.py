@@ -2,6 +2,7 @@ import time
 from pydub import AudioSegment
 import wave
 import numpy as np
+import os
 
 
 class AudioConverter:
@@ -25,3 +26,16 @@ class AudioConverter:
         print("Conversion took: " + str(duration) + " s")
         print("Audio duration: " + str(int(len(signal) / fs / 60)) + ' min ' + str(int(len(signal) / fs % 60)) + ' s')
         return time_x, signal
+
+
+def find_mp3_files(directory):
+    mp3_files = []
+    # Walk through all directories and subdirectories
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            # Check if the file ends with .mp3
+            if file.endswith(".mp3"):
+                mp3_files.append(os.path.join(root, file))
+    if len(mp3_files) == 0:
+        mp3_files.append('')
+    return mp3_files
