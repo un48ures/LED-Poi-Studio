@@ -113,8 +113,8 @@ window.drawCursor(pygame.mixer.music.get_pos())
 window.show()
 window.update()
 print(pygame.mixer.music.get_busy())
-    if pygame.mixer.music.get_busy():
-        print("busy")
-        window.labeltime.setText("Time: " + str(pygame.mixer.music.get_pos()))
+if pygame.mixer.music.get_busy():
+    print("busy")
+    window.labeltime.setText("Time: " + str(pygame.mixer.music.get_pos()))
 
 sys.exit(app.exec())

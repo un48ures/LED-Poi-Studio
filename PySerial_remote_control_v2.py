@@ -1,3 +1,4 @@
+import sys
 import time
 import tkinter as tk
 from tkinter import ttk
@@ -24,20 +25,19 @@ receiver_ids = [1, 2, 3, 4, 5, 6]
 # 6.byte - velocity
 
 # Send bytes
-def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity):
+def send(mode, receiver_id, picture, hue, saturation, brightness_value, velocity):
     byte1 = mode
     byte2 = receiver_id
-    byte3 = picture_hue
-    byte4 = saturation
-    byte5 = brightness_value
-    byte6 = velocity
-
-    serialPort.write(chr(byte1).encode('latin_1'))
-    serialPort.write(chr(byte2).encode('latin_1'))
-    serialPort.write(chr(byte3).encode('latin_1'))
-    serialPort.write(chr(byte4).encode('latin_1'))
-    serialPort.write(chr(byte5).encode('latin_1'))
-    serialPort.write(chr(byte6).encode('latin_1'))
+    byte3 = picture
+    byte4 = hue
+    byte5 = saturation
+    byte6 = brightness_value
+    byte7 = velocity
+    starttime_SP_write = time.time_ns()
+    serialPort.write(
+        chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
+        chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1') + chr(byte7).encode(
+            'latin_1'))
     # msg = chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') + chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1')
     # serialPort.write(msg)
 
@@ -50,7 +50,7 @@ def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity)
     print("Receiver select: " + str(receiver_select.get()))
 
     # Wait until there is data waiting in the serial buffer
-    if serialPort.in_waiting > 8:
+    if serialPort.in_waiting > 50:
 
         # Read data out of the buffer until a carriage return / new line is found
         serialString = serialPort.readline()
@@ -73,38 +73,34 @@ def send(mode, receiver_id, picture_hue, saturation, brightness_value, velocity)
             inputss6.set(res[11] + "%")
         except:
             pass
-
+    print("Duration for serial port write and receive: " + str(
+        (time.time_ns() - starttime_SP_write) / 1000000) + " ms")
 
 def send_single_all():
-    if mode_select.get() == 1:  # Video Light -> Hue
-        picture_hue = hslider.get()
-    else:  # Picture
-        picture_hue = input_picture.get()
-
     if receiver_select.get() == -1:  # Select all (-1)
-        send(mode_select.get(), receiver_ids[0], picture_hue, sslider.get(), bslider.get(), vslider.get())
-        send(mode_select.get(), receiver_ids[1], picture_hue, sslider.get(), bslider.get(), vslider.get())
-        send(mode_select.get(), receiver_ids[2], picture_hue, sslider.get(), bslider.get(), vslider.get())
-        send(mode_select.get(), receiver_ids[3], picture_hue, sslider.get(), bslider.get(), vslider.get())
-        send(mode_select.get(), receiver_ids[4], picture_hue, sslider.get(), bslider.get(), vslider.get())
-        send(mode_select.get(), receiver_ids[5], picture_hue, sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_ids[0], input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_ids[1], input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_ids[2], input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_ids[3], input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_ids[4], input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_ids[5], input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
         # time.sleep(0.25)
 
     else:
-        send(mode_select.get(), receiver_select.get(), picture_hue, sslider.get(), bslider.get(), vslider.get())
+        send(mode_select.get(), receiver_select.get(), input_picture.get(), hslider.get(), sslider.get(), bslider.get(), vslider.get())
 
 
 def send_off():
     if receiver_select.get() == -1:  # Select all (-1)
-        send(mode_select.get(), receiver_ids[0], 0, 0, 0, 0)
-        send(mode_select.get(), receiver_ids[1], 0, 0, 0, 0)
-        send(mode_select.get(), receiver_ids[2], 0, 0, 0, 0)
-        send(mode_select.get(), receiver_ids[3], 0, 0, 0, 0)
-        send(mode_select.get(), receiver_ids[4], 0, 0, 0, 0)
-        send(mode_select.get(), receiver_ids[5], 0, 0, 0, 0)
+        send(mode_select.get(), receiver_ids[0], 0, 0, 0, 0, 0)
+        send(mode_select.get(), receiver_ids[1], 0, 0, 0, 0, 0)
+        send(mode_select.get(), receiver_ids[2], 0, 0, 0, 0, 0)
+        send(mode_select.get(), receiver_ids[3], 0, 0, 0, 0, 0)
+        send(mode_select.get(), receiver_ids[4], 0, 0, 0, 0, 0)
+        send(mode_select.get(), receiver_ids[5], 0, 0, 0, 0, 0)
 
     else:
-        send(mode_select.get(), receiver_select.get(), 0, 0, 0, 0)
+        send(mode_select.get(), receiver_select.get(), 0, 0, 0, 0, 0)
 
 
 def input_inc():
@@ -342,6 +338,10 @@ inputss6 = tk.IntVar()
 inputss6.set('0%')
 inputbox = tk.Entry(root, textvariable=inputss6, width=SignalBoxWidth)
 inputbox.grid(row=7, column=10, padx=20)
+
+def exit_program():
+    serialPort.close()
+    root.destroy
 
 # Exit Button
 buttonExit = tk.Button(root, text="Exit", command=root.destroy)
