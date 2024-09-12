@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1281</width>
-    <height>1025</height>
+    <width>1163</width>
+    <height>940</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,12 +15,26 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>icon_LS_v1.png</normaloff>icon_LS_v1.png</iconset>
+    <normaloff>icon_LS_v2_128_128.ico</normaloff>icon_LS_v2_128_128.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="leftMargin">
+     <number>15</number>
+    </property>
+    <property name="rightMargin">
+     <number>15</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QTabWidget" name="tabWidget">
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
       <property name="autoFillBackground">
        <bool>false</bool>
       </property>
@@ -39,13 +53,13 @@
             <property name="minimumSize">
              <size>
               <width>500</width>
-              <height>100</height>
+              <height>75</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>16777215</width>
-              <height>200</height>
+              <height>150</height>
              </size>
             </property>
             <property name="styleSheet">
@@ -62,7 +76,7 @@
             <property name="minimumSize">
              <size>
               <width>400</width>
-              <height>200</height>
+              <height>100</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -72,7 +86,7 @@
              </size>
             </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
-             <number>70</number>
+             <number>75</number>
             </attribute>
             <column>
              <property name="text">
@@ -121,7 +135,7 @@
             <property name="minimumSize">
              <size>
               <width>250</width>
-              <height>200</height>
+              <height>100</height>
              </size>
             </property>
             <property name="maximumSize">
@@ -131,7 +145,7 @@
              </size>
             </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
-             <number>75</number>
+             <number>65</number>
             </attribute>
             <column>
              <property name="text">
@@ -165,7 +179,7 @@
              <number>15</number>
             </property>
             <property name="bottomMargin">
-             <number>20</number>
+             <number>0</number>
             </property>
             <item alignment="Qt::AlignHCenter">
              <widget class="QLabel" name="label">
@@ -189,7 +203,7 @@
               </property>
               <property name="font">
                <font>
-                <pointsize>40</pointsize>
+                <pointsize>35</pointsize>
                </font>
               </property>
               <property name="text">
@@ -224,7 +238,7 @@
                   <property name="minimumSize">
                    <size>
                     <width>50</width>
-                    <height>30</height>
+                    <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -252,7 +266,7 @@
                   <property name="minimumSize">
                    <size>
                     <width>50</width>
-                    <height>30</height>
+                    <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -272,14 +286,14 @@
                    <number>0</number>
                   </property>
                   <property name="rightMargin">
-                   <number>0</number>
+                   <number>10</number>
                   </property>
                   <item alignment="Qt::AlignLeft">
                    <widget class="QLabel" name="label_6">
                     <property name="minimumSize">
                      <size>
                       <width>25</width>
-                      <height>20</height>
+                      <height>25</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -307,7 +321,7 @@
                     <property name="minimumSize">
                      <size>
                       <width>75</width>
-                      <height>30</height>
+                      <height>25</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -326,14 +340,14 @@
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_7">
                   <property name="rightMargin">
-                   <number>0</number>
+                   <number>10</number>
                   </property>
                   <item alignment="Qt::AlignLeft">
                    <widget class="QLabel" name="label_7">
                     <property name="minimumSize">
                      <size>
                       <width>25</width>
-                      <height>0</height>
+                      <height>25</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -348,11 +362,11 @@
                    </widget>
                   </item>
                   <item alignment="Qt::AlignRight">
-                   <widget class="QComboBox" name="comboBox">
+                   <widget class="QComboBox" name="receiverBox">
                     <property name="minimumSize">
                      <size>
                       <width>75</width>
-                      <height>30</height>
+                      <height>25</height>
                      </size>
                     </property>
                     <property name="maximumSize">
@@ -410,8 +424,8 @@
                  <widget class="QPushButton" name="pushButton_7">
                   <property name="minimumSize">
                    <size>
-                    <width>100</width>
-                    <height>30</height>
+                    <width>50</width>
+                    <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -429,8 +443,8 @@
                  <widget class="QPushButton" name="pushButton_4">
                   <property name="minimumSize">
                    <size>
-                    <width>100</width>
-                    <height>30</height>
+                    <width>50</width>
+                    <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -454,7 +468,7 @@
                  <widget class="QPushButton" name="pushButton_8">
                   <property name="minimumSize">
                    <size>
-                    <width>186</width>
+                    <width>50</width>
                     <height>30</height>
                    </size>
                   </property>
@@ -493,7 +507,7 @@ QPushButton:pressed {
                  <widget class="QPushButton" name="pushButton_3">
                   <property name="minimumSize">
                    <size>
-                    <width>186</width>
+                    <width>50</width>
                     <height>30</height>
                    </size>
                   </property>
@@ -544,8 +558,8 @@ QPushButton:pressed {
                  <widget class="QCheckBox" name="checkBox">
                   <property name="minimumSize">
                    <size>
-                    <width>100</width>
-                    <height>40</height>
+                    <width>50</width>
+                    <height>25</height>
                    </size>
                   </property>
                   <property name="font">
@@ -578,8 +592,8 @@ QPushButton:pressed {
                   </property>
                   <property name="minimumSize">
                    <size>
-                    <width>100</width>
-                    <height>175</height>
+                    <width>50</width>
+                    <height>25</height>
                    </size>
                   </property>
                   <property name="maximumSize">
@@ -613,7 +627,7 @@ QPushButton:pressed {
                    <number>0</number>
                   </property>
                   <property name="text">
-                   <string>Last sent message:</string>
+                   <string/>
                   </property>
                   <property name="alignment">
                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -867,7 +881,7 @@ QPushButton:pressed {
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_2">
             <property name="leftMargin">
-             <number>50</number>
+             <number>25</number>
             </property>
             <property name="topMargin">
              <number>10</number>
@@ -913,7 +927,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>65</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -932,7 +946,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>400</width>
-                  <height>0</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -960,7 +974,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>50</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -986,7 +1000,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>65</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1005,7 +1019,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>400</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1027,7 +1041,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>50</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1053,7 +1067,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>65</width>
-                  <height>0</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1072,7 +1086,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>400</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1094,7 +1108,7 @@ QPushButton:pressed {
                 <property name="minimumSize">
                  <size>
                   <width>50</width>
-                  <height>25</height>
+                  <height>20</height>
                  </size>
                 </property>
                 <property name="maximumSize">
@@ -1147,8 +1161,114 @@ QPushButton:pressed {
       </widget>
       <widget class="QWidget" name="Info">
        <attribute name="title">
-        <string>Pictures</string>
+        <string>Help</string>
        </attribute>
+       <widget class="QLabel" name="label_11">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>30</y>
+          <width>361</width>
+          <height>661</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel{
+background-color: #3b3b3b;
+color: #ffffff;
+}</string>
+        </property>
+        <property name="text">
+         <string>Picture 0: BLACK 
+Picture 1: WHITE
+Picture 2: Pulsing
+Picture 3: Strobo
+Picture 4: Rainbow
+Picture 5: Confetti
+Picture 6: Sinelon
+Picture 7: BPM
+Picture 8: Juggle
+Picture 9: Fill UP
+Picture 10: Fill DOWN
+Picture 11: DIM UP
+Picture 12: DIM DOWN
+Picture 13: Runner UP
+Picture 14: Runner DOWN
+Picture 15: Pride
+Picture 16: Pacifica
+Picture 17: Fire</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_12">
+        <property name="geometry">
+         <rect>
+          <x>440</x>
+          <y>40</y>
+          <width>431</width>
+          <height>651</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+          <pointsize>10</pointsize>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QLabel{
+background-color: #3b3b3b;
+color: #ffffff;
+}</string>
+        </property>
+        <property name="text">
+         <string>Picture 20: Flames
+Picture 21: AAC Dragon
+Picture 22: Helix DNA
+Picture 23: Waves violet
+Picture 24: Abstract Mandala
+Picture 25: Blue Mandala
+Picture 26: fire_blue_waves_with_balls
+Picture 27: Real Blue Flames
+Picture 28: sun_mosaic_61_35.bmp
+Picture 29: Rainbow triangles
+Picture 30: Violet Dots
+Picture 31: Rainbow Curves
+Picture 32: Rose Pattern
+Picture 33: Orange Circles in row
+Picture 34: Blue Violet Mosaik Pattern
+Picture 35: 61 x 61 array with flower pattern
+Picture 36: antenna_61_150.bmp
+Picture 37: concentross_61_61.bmp
+Picture 38: cool_plasma_mix_61_150.bmp
+Picture 39: fireball_61_61.bmp
+Picture 40: overlappy_lines_61_61.bmp
+Picture 41: pink_blue_boxes_61_61.bmp
+Picture 42: pulse07_violet_61_61.bmp
+Picture 43: strobe07_61_61.bmp
+Picture 44: wave_61_61.bmp
+Picture 45: yellowish_mirrored_61_61.bmp
+Picture 46: pink streak_61_150.bmp
+Picture 47: rainbow_music_61_150.bmp
+Picture 48: rainbow_triangles_61_150.bmp
+Picture 49: supersphere_red_61_150.bmp
+Picture 50: rainbow_worm_61_150.bmp</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>
@@ -1159,7 +1279,7 @@ QPushButton:pressed {
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1281</width>
+     <width>1163</width>
      <height>21</height>
     </rect>
    </property>

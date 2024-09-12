@@ -520,7 +520,7 @@ class MyGUI(QMainWindow):
                                     + f"Saturation.: {saturation}\n"
                                     + f"Brightness: {self.brightnessSlider.value()}\n"
                                     + f"Velocity.: {velocity}"
-                                    )
+                                )
                                 r[-1] = "True"
                                 self.paint_status_in_table_green(index)  # used to be time problematic !
                         index += 1
@@ -543,7 +543,8 @@ class MyGUI(QMainWindow):
             mode_t = PICTURE_MODE
 
         if ids != "ALL":
-            self.arduino.send(mode_t, int(self.receiverBox.currentText()), self.spinBox.value(), self.colorSlider.value(),
+            self.arduino.send(mode_t, int(self.receiverBox.currentText()), self.spinBox.value(),
+                              self.colorSlider.value(),
                               saturation, self.brightnessSlider.value(), self.velocitySlider.value())
         else:
             # Broadcast to all receivers
@@ -558,7 +559,7 @@ class MyGUI(QMainWindow):
             + f"Saturation.: {saturation}\n"
             + f"Brightness: {self.brightnessSlider.value()}\n"
             + f"Velocity.: {self.velocitySlider.value()}"
-            )
+        )
 
     def reset(self):
         self.pushButton.setText("Start")
@@ -582,7 +583,7 @@ class MyGUI(QMainWindow):
 
     def set_marker_picture(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
-                                    self.receiverBox.currentText(), PICTURE_MODE,
+                                    self.receiverBox.currentText(), str(PICTURE_MODE),
                                     self.spinBox.value(), self.colorSlider.value(), self.velocitySlider.value(), False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
@@ -591,7 +592,7 @@ class MyGUI(QMainWindow):
 
     def set_marker_color(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
-                                    self.receiverBox.currentText(), COLOR_MODE,
+                                    self.receiverBox.currentText(), str(COLOR_MODE),
                                     0, self.colorSlider.value(), 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
