@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['LED_Poi_Studio\\Main.py'],
+    ['Main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('C:/Users/felix/PycharmProjects/Controller/LED_Poi_Studio/Studio_GUI.ui', '.')],
     hiddenimports=['numpy'],
     hookspath=[],
     hooksconfig={},
