@@ -11,6 +11,7 @@ from PyQt5 import QtWidgets
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QIcon
 import numpy as np
 from pygame import mixer
 import pygame
@@ -21,6 +22,15 @@ from Marker import MarkerList
 import AudioConverter
 import pyqtgraph as pg
 import colorsys
+
+
+def set_column_not_editable(table_widget, column_index):
+    for row in range(table_widget.rowCount()):
+        item = table_widget.item(row, column_index)
+        if item is None:
+            item = QTableWidgetItem()  # Create a new item if none exists
+            table_widget.setItem(row, column_index, item)
+        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # Disable editing
 
 
 def resource_path(relative_path):
@@ -190,7 +200,7 @@ class MyGUI(QMainWindow):
         self.previous_passed = 0
         self.paused = False
         self.plotwidget = 0
-        self.waveform_widget.setBackground(QColor(255, 255, 255))
+        self.waveform_widget.setBackground(QColor(59, 59, 59))  # 0x3b3b3b
         self.waveform_widget.hideAxis('bottom')
         self.waveform_widget.hideAxis('left')
         self.waveform_widget.scene().sigMouseMoved.connect(self.mouse_moved)
@@ -219,7 +229,7 @@ class MyGUI(QMainWindow):
         self.create_info_table()
         self.music_startpoint_offset = 0
         self.time_stamp = 0
-        # self.table1.cellChanged.connect(self.on_cell_changed)
+        self.table1.cellChanged.connect(self.on_cell_changed)
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
@@ -230,7 +240,8 @@ class MyGUI(QMainWindow):
         self.start_stop()
 
     def on_cell_changed(self, row, column):
-        self.marker_list.List[row][column] = self.table1.item(row, column).text()
+        self.marker_list.List[row][column] = str(self.table1.item(row, column).text())
+        self.marker_list.update_backup_file()
         print(f"self.marker_list.List[{row}][{column}] is now: {self.table1.item(row, column).text()}")
 
     def mouse_moved(self, evt):
@@ -345,6 +356,10 @@ class MyGUI(QMainWindow):
 
     def refresh_marker_table(self):
         print("Refresh Table")
+        try:
+            self.table1.cellChanged.disconnect(self.on_cell_changed)
+        except:
+            print("Not yet connected")
         # self.table1.clear()
         self.table1.setRowCount(len(self.marker_list.List))
         row_counter = 0
@@ -375,6 +390,8 @@ class MyGUI(QMainWindow):
             row_counter = row_counter + 1
         # Tweak to update
         self.table1.setRowCount(len(self.marker_list.List) + 1)
+        set_column_not_editable(self.table1, 0)
+        set_column_not_editable(self.table1, 3)
 
     def create_info_table(self):
         self.tableWidget.setRowCount(len(receiver_ids))
@@ -424,8 +441,16 @@ class MyGUI(QMainWindow):
             mixer.music.pause()
             print("Music pause")
             self.paused = True
+            self.table1.cellChanged.connect(self.on_cell_changed)
         # Start - Running
         else:
+            print("Music play")
+            try:
+                self.table1.cellChanged.disconnect(self.on_cell_changed)
+
+            except:
+                print("Not yet connected")
+
             self.running = True
             self.stop_watch_start = time.perf_counter()
             self.pushButton.setText("Stop")
@@ -455,7 +480,7 @@ class MyGUI(QMainWindow):
                 if old_mixer_pos != mixer.music.get_pos():
                     # print(f"time.time_ns: {time.time_ns()}\n")
                     # print(f"time.perf_counter. {time.perf_counter() * 1000}\n")
-                    print(f"mixer.music.get_pos: {mixer.music.get_pos()}\n")
+                    # print(f"mixer.music.get_pos: {mixer.music.get_pos()}\n")
                     # print(f"time.perf_counter - starttime {time.perf_counter() - self.stop_watch_start}\n")
                     starttime = time.time_ns()
                     # rows -> markers
@@ -489,14 +514,13 @@ class MyGUI(QMainWindow):
                                 # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
                                 # set marker sent_status "True"
                                 self.label_3.setText(
-                                    "Last sent message:\n\n"
-                                    + f"Channel: {ids}\n"
+                                    f"Channel: {ids}\n"
                                     + f"Picture Nr.: {picture}\n"
                                     + f"Color/Hue.: {color}\n"
                                     + f"Saturation.: {saturation}\n"
                                     + f"Brightness: {self.brightnessSlider.value()}\n"
-                                    + f"Velocity.: {velocity}\n"
-                                      f"\n\n")
+                                    + f"Velocity.: {velocity}"
+                                    )
                                 r[-1] = "True"
                                 self.paint_status_in_table_green(index)  # used to be time problematic !
                         index += 1
@@ -512,14 +536,14 @@ class MyGUI(QMainWindow):
     def send_test_button_data(self):
         mode_t = 0
         saturation = 255
-        ids = self.comboBox.currentText()
+        ids = self.receiverBox.currentText()
         if self.spinBox.value() == 0:
             mode_t = COLOR_MODE
         else:
             mode_t = PICTURE_MODE
 
         if ids != "ALL":
-            self.arduino.send(mode_t, int(self.comboBox.currentText()), self.spinBox.value(), self.colorSlider.value(),
+            self.arduino.send(mode_t, int(self.receiverBox.currentText()), self.spinBox.value(), self.colorSlider.value(),
                               saturation, self.brightnessSlider.value(), self.velocitySlider.value())
         else:
             # Broadcast to all receivers
@@ -528,20 +552,20 @@ class MyGUI(QMainWindow):
                                   self.brightnessSlider.value(), self.velocitySlider.value())
 
         self.label_3.setText(
-            "Last sent message:\n\n"
-            + f"Channel: {ids}\n"
+            f"Channel: {ids}\n"
             + f"Picture Nr.: {self.spinBox.value()}\n"
             + f"Color/Hue.: {self.colorSlider.value()}\n"
             + f"Saturation.: {saturation}\n"
             + f"Brightness: {self.brightnessSlider.value()}\n"
-            + f"Velocity.: {self.velocitySlider.value()}\n"
-              f"\n\n")
-
-    # def send_all_off_data(self):
+            + f"Velocity.: {self.velocitySlider.value()}"
+            )
 
     def reset(self):
         self.pushButton.setText("Start")
-        # self.pushButton_2.setEnabled(False)
+        try:
+            self.table1.cellChanged.disconnect(self.on_cell_changed)
+        except:
+            print("Not yet connected")
         self.label.setText("00:00:00:00")
         mixer.music.stop()
         self.paused = False
@@ -554,11 +578,12 @@ class MyGUI(QMainWindow):
         for ids in receiver_ids:
             self.arduino.send(2, ids, 0, 0, 0, 0, 0)
         self.refresh_marker_table()
+        self.table1.cellChanged.connect(self.on_cell_changed)
 
     def set_marker_picture(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
-                                    self.comboBox.currentText(), PICTURE_MODE,
-                                    self.spinBox.value(), 0, self.velocitySlider.value(), False)
+                                    self.receiverBox.currentText(), PICTURE_MODE,
+                                    self.spinBox.value(), self.colorSlider.value(), self.velocitySlider.value(), False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
         self.refresh_marker_table()
@@ -566,7 +591,7 @@ class MyGUI(QMainWindow):
 
     def set_marker_color(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
-                                    self.comboBox.currentText(), COLOR_MODE,
+                                    self.receiverBox.currentText(), COLOR_MODE,
                                     0, self.colorSlider.value(), 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
@@ -575,7 +600,7 @@ class MyGUI(QMainWindow):
 
     def set_marker_off(self):
         self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
-                                    self.comboBox.currentText(), PICTURE_MODE,
+                                    self.receiverBox.currentText(), PICTURE_MODE,
                                     0, 0, 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
         self.update_marker_plot_data()
@@ -622,6 +647,7 @@ def main():
     mixer.init()
     app = QApplication([])
     window = MyGUI()
+    window.setWindowIcon(QIcon(resource_path('icon_LS_v2_128_128.ico')))
     # Apply the dark theme stylesheet
     app.setStyleSheet(dark_theme)
     # cProfile.run('MyGUI()', 'PROFILE.txt')
