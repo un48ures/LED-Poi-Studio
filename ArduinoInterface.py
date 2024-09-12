@@ -26,16 +26,22 @@ class ArduinoInterface:
         for p in self.ports_names:
             index = index + 1
             if "arduino uno" in p.lower():
+                try:
+                    self.serialPort = serial.Serial(
+                        port=self.ports_COMs[index - 1], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
+                        stopbits=serial.STOPBITS_ONE
+                    )
+                except:
+                    print("Could not connect to Arduino Uno")
+
+        if self.serialPort is None:  # open just the first port
+            try:
                 self.serialPort = serial.Serial(
-                    port=self.ports_COMs[index - 1], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
+                    port=self.ports_COMs[0], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
                     stopbits=serial.STOPBITS_ONE
                 )
-
-        if not self.serialPort.is_open:  # open just the first port
-            self.serialPort = serial.Serial(
-                port=self.ports_COMs[0], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
-                stopbits=serial.STOPBITS_ONE
-            )
+            except:
+                print("Could not open the first port as default")
 
     def go_all_black(self):
         # Make all LEDs go black
