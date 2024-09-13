@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['Main.py'],
-    pathex=[],
+    ['Studio.py'],
+    pathex=['.'],
     binaries=[],
-    datas=[('C:/Users/felix/PycharmProjects/Controller/LED_Poi_Studio/Studio_GUI.ui', '.')],
+    datas=[('C:/Users/felix/PycharmProjects/LED-Poi-Studio/Studio_GUI.ui', '.'),('C:/Users/felix/PycharmProjects/LED-Poi-Studio/icon_LS_v2_128_128.ico','.')],
     hiddenimports=['numpy'],
     hookspath=[],
     hooksconfig={},
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='Main',
+    name='LED_Poi_Studio',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+	icon='C:/Users/felix/PycharmProjects/LED-Poi-Studio/icon_LS_v2_128_128.ico'
 )
