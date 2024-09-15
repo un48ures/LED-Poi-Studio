@@ -200,6 +200,7 @@ class MyGUI(QMainWindow):
         self.previous_passed = 0
         self.paused = False
         self.plotwidget = 0
+        self.label_cursor = pg.TextItem("Test", anchor=(0, 1))
         self.waveform_widget.setBackground(QColor(59, 59, 59))  # 0x3b3b3b
         self.waveform_widget.hideAxis('bottom')
         self.waveform_widget.hideAxis('left')
@@ -230,6 +231,7 @@ class MyGUI(QMainWindow):
         self.music_startpoint_offset = 0
         self.time_stamp = 0
         self.table1.cellChanged.connect(self.on_cell_changed)
+
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
@@ -314,6 +316,7 @@ class MyGUI(QMainWindow):
         duration = int((time.time() - starttime) * 100) / 100
         self.update_marker_plot_data()
         print(f"Plotting waveform finisehd after {duration} s.")
+        self.waveform_widget.addItem(self.label_cursor)
 
     def update_cursor_plot_data(self):
         if self.cursor is not None:
@@ -329,6 +332,8 @@ class MyGUI(QMainWindow):
                 if m_pos > 0:
                     if index == next_marker:  # mark the nearest marker orange
                         pen = pg.mkPen('g', width=2)
+                        self.label_cursor.setPos(m_pos, 2 * 10 ** 9)
+                        self.label_cursor.setText(str(index))
                     else:
                         pen = pg.mkPen('b', width=1)
                     self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen=pen)
