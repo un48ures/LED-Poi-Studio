@@ -1,6 +1,8 @@
 import serial.tools.list_ports as port_list
 import serial
 import time
+from PyQt5 import QtCore, QtGui
+import sys
 
 
 class ArduinoInterface:
@@ -12,6 +14,7 @@ class ArduinoInterface:
         self.ports_names = []
         self.ports_COMs = []
         self.serialPort = None
+        self.signal_strength_test_active = False
 
     def find_ports(self):
         # Find connected Ports for Arduino
@@ -46,7 +49,7 @@ class ArduinoInterface:
     def go_all_black(self):
         # Make all LEDs go black
         for ids in self.receiver_ids:
-            self.send(2, ids, 0, 0, 0, 0, 0) # 2 = Picture Mode
+            self.send(2, ids, 0, 0, 0, 0, 0)  # 2 = Picture Mode
 
     def print_receiver_infos(self):
         for x in range(self.total_num_receivers):
@@ -55,6 +58,10 @@ class ArduinoInterface:
     # def send(self, channel, picturenum, brightness):
     def send(self, mode, receiver_id, picture, hue, saturation, brightness_value, velocity):
         starttime_SP_write = time.time_ns()
+        if mode != 3:
+            self.signal_strength_test_active = False
+            # print("Signal Strength Test OFF")
+
         byte1, byte2, byte3, byte4, byte5, byte6, byte7 = int(mode), int(receiver_id), int(picture), int(hue), \
                                                           int(saturation), int(brightness_value), int(velocity)
         self.serialPort.write(
@@ -65,16 +72,10 @@ class ArduinoInterface:
         # self.serialPort.reset_input_buffer()  # Fixed some problems earlier!
         # serialPort.reset_output_buffer()
 
-        if self.serialPort.in_waiting > 30: # 3.69_ -> 5 byte -> *6 (Pois) * 2 (Signal Strength) = 60
-            # Read data out of the buffer until a carriage return / new line is found
-            bytearray = self.serialPort.readline()
-            res = str(bytearray.decode("Ascii"))
-            lst = res.split()
-            self.voltages = lst[:6]
-            self.signal_strength = lst[-6:]
-
-        print("Duration for serial port write and receive: " + str(
-            (time.time_ns() - starttime_SP_write) / 1000000) + " ms")
+        self.receive()
+        duration = (time.time_ns() - starttime_SP_write) / 1000000
+        if duration > 3:
+            print("Duration for serial port write and receive: " + str(duration) + " ms")
         # self.print_receiver_infos()
 
         # print("after readLine")
@@ -87,6 +88,15 @@ class ArduinoInterface:
         # except:
         #     print("Error")
         #     pass
+    def receive(self):
+        if self.serialPort.in_waiting >= 72:  # measured 72 bytes/characters
+            # Read data out of the buffer until a carriage return / new line is found
+            input_bytearray = self.serialPort.readline()
+            res = str(input_bytearray.decode("Ascii"))
+            lst = res.split()
+            self.voltages = lst[:6]
+            self.signal_strength = lst[-6:]
 
-    def signal_strength_test(self):
+    def signal_strength_test_start(self):
         self.send(3, 0, 0, 0, 0, 0, 0)
+        self.signal_strength_test_active = True

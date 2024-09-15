@@ -3,8 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="44277404-10d4-4929-b9de-a497cc2c1e3a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ArduinoInterface.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArduinoInterface.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Studio.py" beforeDir="false" afterPath="$PROJECT_DIR$/Studio.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Studio_GUI.ui" beforeDir="false" afterPath="$PROJECT_DIR$/Studio_GUI.ui" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/projectFile.txt" beforeDir="false" afterPath="$PROJECT_DIR$/projectFile.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

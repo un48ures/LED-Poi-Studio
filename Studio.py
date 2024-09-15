@@ -221,7 +221,7 @@ class MyGUI(QMainWindow):
         self.pushButton_7.clicked.connect(self.set_marker_off)
         self.testButton.clicked.connect(self.send_test_button_data)
         self.offButton.clicked.connect(self.arduino.go_all_black)
-        self.signalTestButton.clicked.connect(self.arduino.signal_strength_test)
+        self.signalTestButton.clicked.connect(self.arduino.signal_strength_test_start)
         self.exit_Button.clicked.connect(self.exit)
         self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
@@ -401,6 +401,9 @@ class MyGUI(QMainWindow):
             self.tableWidget.setItem(r, 2, QtWidgets.QTableWidgetItem(str(self.arduino.signal_strength[r]) + " %"))
 
     def update_gui_slow(self):
+        if self.arduino.signal_strength_test_active:
+            self.arduino.receive()
+
         # Info table with voltages and signal strength
         for r in range(len(receiver_ids)):
             item = self.tableWidget.item(r, 1)
