@@ -2,14 +2,14 @@ import sys
 import time
 import threading
 import os
-from PyQt5 import uic
-from PyQt5.QtWidgets import *
-from PyQt5.uic.properties import QtWidgets
-from PyQt5 import QtWidgets
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtGui import QIcon
+from PyQt6 import uic
+from PyQt6.QtWidgets import *
+from PyQt6.uic.properties import QtWidgets
+from PyQt6 import QtWidgets
+from PyQt6 import QtCore, QtGui
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QIcon
 import numpy as np
 from pygame import mixer
 import pygame
@@ -29,7 +29,7 @@ def set_column_not_editable(table_widget, column_index):
         if item is None:
             item = QTableWidgetItem()  # Create a new item if none exists
             table_widget.setItem(row, column_index, item)
-        item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # Disable editing
+        item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)  # Disable editing
 
 
 def resource_path(relative_path):
@@ -56,7 +56,7 @@ def time_printer():
         # time.sleep(0.0001)
 
 
-ui_file = resource_path('Studio_GUI.ui')
+ui_file = resource_path('Studio_GUI_new.ui')
 mp3_files = AudioConverter.find_mp3_files(os.path.dirname(__file__))
 REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
 receiver_ids = [1, 2, 3, 4, 5, 6]
