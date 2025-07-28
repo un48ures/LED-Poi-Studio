@@ -1,8 +1,6 @@
-import multiprocessing
 import sys
 import time
 import threading
-from multiprocessing import Process
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import *
@@ -15,13 +13,14 @@ from PyQt5.QtGui import QIcon
 import numpy as np
 from pygame import mixer
 import pygame
-import cProfile
-import pstats
 from ArduinoInterface import ArduinoInterface
 from Marker import MarkerList
 import AudioConverter
 import pyqtgraph as pg
 import colorsys
+
+# own files
+from dark_theme import dark_theme
 
 
 def set_column_not_editable(table_widget, column_index):
@@ -65,7 +64,7 @@ COLOR_MODE = 1
 PICTURE_MODE = 2
 p_flag = True
 
-from dark_theme import dark_theme
+
 
 class MyGUI(QMainWindow):
 
@@ -531,8 +530,11 @@ class MyGUI(QMainWindow):
         self.arduino.go_all_black()
 
     def exit(self):
-        self.arduino.go_all_black()
-        self.arduino.serialPort.close()
+        if self.arduino.serialPort is not None:
+            self.arduino.go_all_black()
+            self.arduino.serialPort.close()
+        else:
+            print("No serial connection established")
         time.sleep(0.100)
         sys.exit()
 
