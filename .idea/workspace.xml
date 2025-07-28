@@ -4,30 +4,40 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="44277404-10d4-4929-b9de-a497cc2c1e3a" name="Changes" comment="Make exit button work without connected without connected Arduino">
+    <list default="true" id="44277404-10d4-4929-b9de-a497cc2c1e3a" name="Changes" comment="Changed marker drawings from plot to InfiniteLine">
+      <change afterPath="$PROJECT_DIR$/time_functions.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Studio.py" beforeDir="false" afterPath="$PROJECT_DIR$/Studio.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frame015.bmp" beforeDir="false" afterPath="$PROJECT_DIR$/newGraphics_8_bit_bmp/frame015.bmp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/projectFile.txt" beforeDir="false" afterPath="$PROJECT_DIR$/projectFile.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "un48ures"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;un48ures&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/un48ures/LED-Poi-Studio.git",
-    "accountId": "eb17a3c1-e0ea-45fd-a900-3a3d22746ccd"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/un48ures/LED-Poi-Studio.git&quot;,
+    &quot;accountId&quot;: &quot;eb17a3c1-e0ea-45fd-a900-3a3d22746ccd&quot;
   }
-}]]></component>
+}</component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -35,7 +45,9 @@
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="2lzUkzEfMHx3iFL5sSvvkjxE5gM" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -51,6 +63,11 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\aac_n\Documents\work\LED-Poi-Studio\newGraphics_8_bit_bmp" />
+    </key>
+  </component>
   <component name="RunManager" selected="Python.Studio">
     <configuration name="ImageConverter" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="LED-Poi-Studio" />
@@ -138,7 +155,23 @@
       <option name="project" value="LOCAL" />
       <updated>1753701570190</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Upgraded to PyQt6">
+      <option name="closed" value="true" />
+      <created>1753706423547</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1753706423547</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Changed marker drawings from plot to InfiniteLine">
+      <option name="closed" value="true" />
+      <created>1753710291750</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1753710291750</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -155,6 +188,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Exported dark_theme in separate file" />
     <MESSAGE value="Make exit button work without connected without connected Arduino" />
-    <option name="LAST_COMMIT_MESSAGE" value="Make exit button work without connected without connected Arduino" />
+    <MESSAGE value="Upgraded to PyQt6" />
+    <MESSAGE value="Changed marker drawings from plot to InfiniteLine" />
+    <option name="LAST_COMMIT_MESSAGE" value="Changed marker drawings from plot to InfiniteLine" />
   </component>
 </project>

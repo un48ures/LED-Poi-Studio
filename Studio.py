@@ -22,6 +22,7 @@ from pyqtgraph import InfiniteLine
 
 # own files
 from dark_theme import dark_theme
+from time_functions import format_time_string
 
 
 def set_column_not_editable(table_widget, column_index):
@@ -482,7 +483,7 @@ class MyGUI(QMainWindow):
         self.table1.cellChanged.connect(self.on_cell_changed)
 
     def set_marker_picture(self):
-        self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
+        self.marker_list.add_marker(self.current_index, format_time_string(self.passed),
                                     self.receiverBox.currentText(), str(PICTURE_MODE),
                                     self.spinBox.value(), self.colorSlider.value(), self.velocitySlider.value(), False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
@@ -491,7 +492,7 @@ class MyGUI(QMainWindow):
         self.current_index += 1
 
     def set_marker_color(self):
-        self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
+        self.marker_list.add_marker(self.current_index, format_time_string(self.passed),
                                     self.receiverBox.currentText(), str(COLOR_MODE),
                                     0, self.colorSlider.value(), 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
@@ -500,7 +501,7 @@ class MyGUI(QMainWindow):
         self.current_index += 1
 
     def set_marker_off(self):
-        self.marker_list.add_marker(self.current_index, self.format_time_string(self.passed),
+        self.marker_list.add_marker(self.current_index, format_time_string(self.passed),
                                     self.receiverBox.currentText(), PICTURE_MODE,
                                     0, 0, 0, False)
         self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
@@ -518,17 +519,11 @@ class MyGUI(QMainWindow):
             self.refresh_marker_table()
             self.current_index -= 1
 
-    def format_time_string(self, time_passed):
-        secs = time_passed % 60
-        mins = time_passed // 60
-        hours = mins // 60
-        return f"{int(hours):02d}:{int(mins):02d}:{int(secs):02d}:{int((self.passed % 1) * 1000):03d}"
-
     def clock(self):
         self.passed = mixer.music.get_pos() / 1000.0 + self.music_startpoint_offset
         if self.passed < 0:
             self.passed = 0
-        self.label.setText(self.format_time_string(self.passed))
+        self.label.setText(format_time_string(self.passed))
 
     def save_serial_config(self):
         self.arduino.serialPort.setPort(self.arduino.ports_COMs[self.comboBox_2.currentIndex()])
@@ -550,15 +545,14 @@ def main():
     # p.start()
     mixer.init()
     app = QApplication([])
-    window = MyGUI()
-    window.setWindowIcon(QIcon(resource_path('icon_LS_v2_128_128.ico')))
     # Apply the dark theme stylesheet
     app.setStyleSheet(dark_theme)
-    # cProfile.run('MyGUI()', 'PROFILE.txt')
-    # mixer.music.load(window.sound_file)
+
+    # Create GUI
+    window = MyGUI()
+    window.setWindowIcon(QIcon(resource_path('icon_LS_v2_128_128.ico')))
     window.animation()
     app.exec()
-
 
 if __name__ == "__main__":
     main()
