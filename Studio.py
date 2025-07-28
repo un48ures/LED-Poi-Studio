@@ -10,6 +10,7 @@ from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QFont
 import numpy as np
 from pygame import mixer
 import pygame
@@ -88,7 +89,9 @@ class MyGUI(QMainWindow):
         self.previous_passed = 0
         self.paused = False
         self.plotwidget = 0
-        self.label_cursor = pg.TextItem("Test", anchor=(0, 1))
+        self.label_cursor = pg.TextItem("Test", anchor=(0, 1),color='r', fill=pg.mkBrush(0, 0, 0, 150))
+        font = QFont("Arial", 16)  # 16 pt font size
+        self.label_cursor.setFont(font)
         self.waveform_widget.setBackground(QColor(59, 59, 59))  # 0x3b3b3b
         self.waveform_widget.hideAxis('bottom')
         self.waveform_widget.hideAxis('left')
@@ -123,7 +126,7 @@ class MyGUI(QMainWindow):
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
-        if event.key() == Qt.Key_Space:
+        if event.key() == Qt.Key.Key_Space:
             self.on_spacebar_pressed()
 
     def on_spacebar_pressed(self):
@@ -136,8 +139,8 @@ class MyGUI(QMainWindow):
 
     def mouse_moved(self, evt):
         vb = self.waveform_widget.plotItem.vb
-        if self.waveform_widget.sceneBoundingRect().contains(evt):
-            mouse_point = vb.mapSceneToView(evt)
+        #if self.waveform_widget.sceneBoundingRect().contains(evt):
+            #mouse_point = vb.mapSceneToView(evt)
             # print(f"X： {mouse_point.x()} Y: {mouse_point.y()}</p>")
 
     def mouse_clicked_play_cursor(self, evt):
@@ -210,14 +213,14 @@ class MyGUI(QMainWindow):
         print(f"Plotting waveform finisehd after {duration} s.")
         self.waveform_widget.addItem(self.label_cursor)
 
-    def update_cursor_plot_data(self):
+    def update_cursor_pos(self):
         if self.cursor is not None:
             self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
             self.cursor.setPos(self.cursor_position)
 
     def update_marker_plot_data(self):
-        # Find nearest marker
-        closest_marker, next_marker_time_ms = self.marker_list.find_nearest_to_time(self.cursor_position * 1000)
+        # Find closest marker
+        closest_marker, unused = self.marker_list.find_nearest_to_time(self.cursor_position * 1000)
 
         # Draw every marker in the list
         if len(self.marker_list.List) > 0 and len(self.lst_markers_plt_h) > 0:
@@ -229,7 +232,9 @@ class MyGUI(QMainWindow):
                     # Find/Draw closest marker in orange
                     if index == closest_marker:  # mark the closest marker orange
                         self.label_cursor.setText(str(index)) # write index number as string in the plot
-                        self.lst_markers_plt_h[index].setPen('w')
+                        self.label_cursor.setPos(m_pos, 0)
+                        self.lst_markers_plt_h[index].setPen('y', width = 3)
+                        # There is a problem, that the closest marker in yellow is overdrawn in blue
                     else:
                         self.lst_markers_plt_h[index].setPen('b')
 
@@ -239,11 +244,11 @@ class MyGUI(QMainWindow):
 
     def animation(self):
         timer_cursor = QtCore.QTimer()
-        timer_cursor.timeout.connect(self.update_cursor_plot_data)
-        timer_cursor.start(25)
+        timer_cursor.timeout.connect(self.update_cursor_pos)
+        timer_cursor.start(100)
         timer_clock = QtCore.QTimer()
         timer_clock.timeout.connect(self.clock)
-        timer_clock.start(20)
+        timer_clock.start(50)
         timer_info_table = QtCore.QTimer()
         timer_info_table.timeout.connect(self.update_gui_slow)
         timer_info_table.start(250)
