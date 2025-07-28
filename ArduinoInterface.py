@@ -1,8 +1,7 @@
 import serial.tools.list_ports as port_list
 import serial
 import time
-from PyQt5 import QtCore, QtGui
-import sys
+import struct
 
 
 class ArduinoInterface:
@@ -62,43 +61,33 @@ class ArduinoInterface:
             self.signal_strength_test_active = False
             # print("Signal Strength Test OFF")
 
-        byte1, byte2, byte3, byte4, byte5, byte6, byte7 = int(mode), int(receiver_id), int(picture), int(hue), \
-                                                          int(saturation), int(brightness_value), int(velocity)
+        START_BYTE = 0xAA
+        packet = bytes([START_BYTE, int(mode), int(receiver_id), int(picture),
+                        int(hue), int(saturation), int(brightness_value), int(velocity)])
+
         if self.serialPort is not None:
-            self.serialPort.write(
-                chr(byte1).encode('latin_1') + chr(byte2).encode('latin_1') + chr(byte3).encode('latin_1') +
-                chr(byte4).encode('latin_1') + chr(byte5).encode('latin_1') + chr(byte6).encode('latin_1') +
-                chr(byte7).encode('latin_1'))
+            self.serialPort.write(packet)
         else:
             print("No serial connection established - can`t write to serial Port")
-        # print("Duration for serial port write " + str((time.time_ns() - starttime_SP_write) / 1000000) + " ms")
-        # self.serialPort.reset_input_buffer()  # Fixed some problems earlier!
-        # serialPort.reset_output_buffer()
 
         self.receive()
         duration = (time.time_ns() - starttime_SP_write) / 1000000
-        if duration > 3:
-            print("Duration for serial port write and receive: " + str(duration) + " ms")
-        # self.print_receiver_infos()
+        print("Duration for serial port write and receive: " + str(duration) + " ms")
 
-        # print("after readLine")
 
-        # Print the contents of the serial data
-        # try:
-        #     for d in res:
-        #         print(d, end="")
-        #     print("")
-        # except:
-        #     print("Error")
-        #     pass
     def receive(self):
-        if self.serialPort is not None and self.serialPort.in_waiting >= 72:  # measured 72 bytes/characters
-            # Read data out of the buffer until a carriage return / new line is found
-            input_bytearray = self.serialPort.readline()
-            res = str(input_bytearray.decode("Ascii"))
-            lst = res.split()
-            self.voltages = lst[:6]
-            self.signal_strength = lst[-6:]
+        if self.serialPort is None:
+            return
+
+        expected_bytes = 12 * 4  # 12 floats, 4 bytes each = 48 bytes
+        if self.serialPort.in_waiting >= expected_bytes:
+            try:
+                raw_data = self.serialPort.read(expected_bytes)
+                floats = struct.unpack('<12f', raw_data)  # Little-endian float
+                self.voltages = floats[:6]
+                self.signal_strength = floats[6:]
+            except Exception as e:
+                print(f"[Binary Receive] Error: {e}")
 
     def signal_strength_test_start(self):
         self.send(3, 0, 0, 0, 0, 0, 0)
