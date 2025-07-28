@@ -71,7 +71,7 @@ class MarkerList:
         for x in self.List:
             x[-1] = "False"
 
-    def get_marker(self):
+    def get_marker_list(self):
         return self.List
 
     def get_marker_time_ms_by_index(self, index):

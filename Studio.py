@@ -47,18 +47,6 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def time_printer():
-    old_time = 0
-    while True:
-        if p_flag and (old_time != time.time_ns()):
-            # do something
-            print(time.time_ns() / 1000000)
-            old_time = time.time_ns()
-        else:
-            pass
-        # time.sleep(0.0001)
-
-
 ui_file = resource_path('Studio_GUI_new.ui')
 mp3_files = AudioConverter.find_mp3_files(os.path.dirname(__file__))
 REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
@@ -140,7 +128,7 @@ class MyGUI(QMainWindow):
     def mouse_moved(self, evt):
         vb = self.waveform_widget.plotItem.vb
         #if self.waveform_widget.sceneBoundingRect().contains(evt):
-            #mouse_point = vb.mapSceneToView(evt)
+            # mouse_point = vb.mapSceneToView(evt)
             # print(f"X： {mouse_point.x()} Y: {mouse_point.y()}</p>")
 
     def mouse_clicked_play_cursor(self, evt):
@@ -360,14 +348,13 @@ class MyGUI(QMainWindow):
             self.running = True
             self.stop_watch_start = time.perf_counter()
             self.pushButton.setText("Stop")
-            # threading.Thread(target=self.stopwatch).start()
-            print(self.checkBox.isChecked())
+
+            # Send via HW-Serial
             if self.checkBox.isChecked():
                 # Check for next marker to be sent
                 print("Thread send marker started")
                 threading.Thread(target=self.send_marker).start()
-                # proc = Process(target=self.send_marker)
-                # proc.start()
+
             # Play Music
             if self.paused:
                 mixer.music.unpause()
@@ -381,7 +368,7 @@ class MyGUI(QMainWindow):
     def send_marker(self):
         old_mixer_pos = 0
         if self.checkBox.isChecked() and self.running:
-            list_m = self.marker_list.get_marker()
+            list_m = self.marker_list.get_marker_list()
             while self.running:  # no more thread used
                 if old_mixer_pos != mixer.music.get_pos():
                     # print(f"time.time_ns: {time.time_ns()}\n")
@@ -404,10 +391,10 @@ class MyGUI(QMainWindow):
                             # decrypt time
                             ms = self.marker_list.get_marker_time_ms(r)
                             # Not send marker if older than 30 ms -> somehow program gets interrupted sometimes for up to 24 ms
-                            if ms < (mixer.music.get_pos() + self.music_startpoint_offset * 1000) < (
-                                    ms + 30):  # 0 <-> 250
+                            current_time = mixer.music.get_pos() + self.music_startpoint_offset * 1000
+                            if ms < current_time < (ms + 30):  # 0 <-> 30
                                 # starttime_serial_send = time.time_ns()
-                                if ids != "ALL":
+                                if ids != "ALL": # -> single receiver
                                     self.arduino.send(mode, ids, picture, color, saturation,
                                                       self.brightnessSlider.value(),
                                                       velocity)
@@ -546,8 +533,6 @@ class MyGUI(QMainWindow):
 
 
 def main():
-    # p = Process(target=time_printer)
-    # p.start()
     mixer.init()
     app = QApplication([])
     # Apply the dark theme stylesheet
