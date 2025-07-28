@@ -18,6 +18,7 @@ from Marker import MarkerList
 import AudioConverter
 import pyqtgraph as pg
 import colorsys
+from pyqtgraph import InfiniteLine
 
 # own files
 from dark_theme import dark_theme
@@ -193,10 +194,14 @@ class MyGUI(QMainWindow):
         self.waveform_widget.setBackground(QColor(48, 74, 67))
         self.waveform_widget.showAxis('bottom')
         # wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
-        self.cursor = self.waveform_widget.plot([0, 0], [0, 0], pen=pg.mkPen('r', width=1))
-        # Marker Plot Handle
+        self.cursor = InfiniteLine(pos=self.cursor_position, angle=90, pen='r')
+        self.waveform_widget.addItem(self.cursor)
+
+        # Create vertical dummy lines for each marker
         for c in range(len(self.marker_list.List)):
-            self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen=pg.mkPen('b', width=2)))
+            temp = InfiniteLine(pos=0, angle=90, pen='b')
+            self.lst_markers_plt_h.append(temp)
+            self.waveform_widget.addItem(temp)
 
         self.waveform_widget.plotItem.setMouseEnabled(y=False)  # zoom only in x
         duration = int((time.time() - starttime) * 100) / 100
@@ -207,24 +212,25 @@ class MyGUI(QMainWindow):
     def update_cursor_plot_data(self):
         if self.cursor is not None:
             self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
-            self.cursor.setData([self.cursor_position, self.cursor_position], [-2 * 10 ** 9, 2 * 10 ** 9])  # cursor
+            self.cursor.setPos(self.cursor_position)
 
     def update_marker_plot_data(self):
         # Find nearest marker
-        next_marker, next_marker_time_ms = self.marker_list.find_nearest_to_time(self.cursor_position * 1000)
+        closest_marker, next_marker_time_ms = self.marker_list.find_nearest_to_time(self.cursor_position * 1000)
+
+        # Draw every marker in the list
         if len(self.marker_list.List) > 0 and len(self.lst_markers_plt_h) > 0:
             for index in range(len(self.marker_list.List)):
                 m_pos = self.marker_list.get_marker_time_ms_by_index(index) / 1000  # marker
                 if m_pos > 0:
-                    if index == next_marker:  # mark the nearest marker orange
-                        pen = pg.mkPen('g', width=2)
-                        self.label_cursor.setPos(m_pos, 2 * 10 ** 9)
-                        self.label_cursor.setText(str(index))
+                    self.lst_markers_plt_h[index].setPos(m_pos)
+
+                    # Find/Draw closest marker in orange
+                    if index == closest_marker:  # mark the closest marker orange
+                        self.label_cursor.setText(str(index)) # write index number as string in the plot
+                        self.lst_markers_plt_h[index].setPen('w')
                     else:
-                        pen = pg.mkPen('b', width=1)
-                    self.lst_markers_plt_h[index].setData([m_pos, m_pos], [-2 * 10 ** 9, 2 * 10 ** 9], pen=pen)
-                else:
-                    self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen=pg.mkPen('b', width=1))
+                        self.lst_markers_plt_h[index].setPen('b')
 
     def start_animation(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
@@ -551,7 +557,7 @@ def main():
     # cProfile.run('MyGUI()', 'PROFILE.txt')
     # mixer.music.load(window.sound_file)
     window.animation()
-    app.exec_()
+    app.exec()
 
 
 if __name__ == "__main__":
