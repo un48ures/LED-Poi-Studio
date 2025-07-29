@@ -25,6 +25,10 @@ from pyqtgraph import InfiniteLine
 from dark_theme import dark_theme
 from time_functions import format_time_string
 
+# For higher precision on windows
+import ctypes
+ctypes.windll.winmm.timeBeginPeriod(1)  # Request 1 ms resolution
+
 
 def set_column_not_editable(table_widget, column_index):
     for row in range(table_widget.rowCount()):
@@ -54,8 +58,9 @@ receiver_ids = [1, 2, 3, 4, 5, 6]
 COLOR_MODE = 1
 PICTURE_MODE = 2
 p_flag = True
-
-
+cursor_thread_interval = 50 # in ms
+clock_thread_intervall = 25 # in ms
+send_marker_thread_intervall = 3 # in ms
 
 class MyGUI(QMainWindow):
 
@@ -110,7 +115,10 @@ class MyGUI(QMainWindow):
         self.music_startpoint_offset = 0
         self.time_stamp = 0
         self.table1.cellChanged.connect(self.on_cell_changed)
-
+        self.old_mixer_pos = 0.0
+        threading.Thread(target=self.send_marker_loop, daemon=True).start()
+        threading.Thread(target=self.clock_loop, daemon=True).start()
+        threading.Thread(target=self.update_cursor_pos_loop, daemon=True).start()
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
@@ -201,6 +209,20 @@ class MyGUI(QMainWindow):
         print(f"Plotting waveform finisehd after {duration} s.")
         self.waveform_widget.addItem(self.label_cursor)
 
+    # Thread function with precision timer
+    def update_cursor_pos_loop(self):
+        next_call = time.perf_counter()
+
+        while True:
+            self.update_cursor_pos()  # ← Replace with your function
+            next_call += cursor_thread_interval
+            delay = next_call - time.perf_counter()
+            if delay > 0:
+                time.sleep(0.010)
+            else:
+                # We're late — skip sleep to catch up
+                print(f"⚠ Missed interval by {-delay * 1000:.2f} ms")
+
     def update_cursor_pos(self):
         if self.cursor is not None:
             self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
@@ -231,18 +253,18 @@ class MyGUI(QMainWindow):
             QtGui.QGuiApplication.instance().exec()
 
     def animation(self):
-        timer_cursor = QtCore.QTimer()
-        timer_cursor.timeout.connect(self.update_cursor_pos)
-        timer_cursor.start(100)
-        timer_clock = QtCore.QTimer()
-        timer_clock.timeout.connect(self.clock)
-        timer_clock.start(50)
+        # timer_cursor = QtCore.QTimer()
+        # timer_cursor.timeout.connect(self.update_cursor_pos)
+        # timer_cursor.start(100)
+        # timer_clock = QtCore.QTimer()
+        # timer_clock.timeout.connect(self.clock)
+        # timer_clock.start(50)
         timer_info_table = QtCore.QTimer()
         timer_info_table.timeout.connect(self.update_gui_slow)
-        timer_info_table.start(250)
-        # timer_send = QtCore.QTimer()
+        timer_info_table.start(100)
+        #timer_send = QtCore.QTimer()
         # timer_send.timeout.connect(self.send_marker)
-        # timer_send.start(10)
+        # timer_send.start(2)
         self.start_animation()
 
     def refresh_marker_table(self):
@@ -349,12 +371,6 @@ class MyGUI(QMainWindow):
             self.stop_watch_start = time.perf_counter()
             self.pushButton.setText("Stop")
 
-            # Send via HW-Serial
-            if self.checkBox.isChecked():
-                # Check for next marker to be sent
-                print("Thread send marker started")
-                threading.Thread(target=self.send_marker).start()
-
             # Play Music
             if self.paused:
                 mixer.music.unpause()
@@ -365,66 +381,77 @@ class MyGUI(QMainWindow):
                 mixer.music.play()
                 print("Music Play")
 
+    # Thread function with precision timer
+    def send_marker_loop(self):
+        next_call = time.perf_counter()
+
+        while True:
+            self.send_marker()  # ← Replace with your function
+            next_call += send_marker_thread_intervall
+            delay = next_call - time.perf_counter()
+            if delay > 0:
+                time.sleep(0.001)
+            else:
+                # We're late — skip sleep to catch up
+                print(f"⚠ Missed interval by {-delay * 1000:.2f} ms")
+
     def send_marker(self):
-        old_mixer_pos = 0
         if self.checkBox.isChecked() and self.running:
             list_m = self.marker_list.get_marker_list()
-            while self.running:  # no more thread used
-                if old_mixer_pos != mixer.music.get_pos():
-                    # print(f"time.time_ns: {time.time_ns()}\n")
-                    # print(f"time.perf_counter. {time.perf_counter() * 1000}\n")
-                    # print(f"mixer.music.get_pos: {mixer.music.get_pos()}\n")
-                    # print(f"time.perf_counter - starttime {time.perf_counter() - self.stop_watch_start}\n")
-                    starttime = time.time_ns()
-                    # rows -> markers
-                    index = 0
-                    for r in list_m:
-                        ids = r[2]
-                        mode = int(r[3])
-                        picture = int(r[4])
-                        color = int(r[5])
-                        velocity = int(r[6])
-                        send_status = r[-1]
-                        saturation = 0
-
-                        if send_status == "False":
-                            # decrypt time
-                            ms = self.marker_list.get_marker_time_ms(r)
-                            # Not send marker if older than 30 ms -> somehow program gets interrupted sometimes for up to 24 ms
-                            current_time = mixer.music.get_pos() + self.music_startpoint_offset * 1000
-                            if ms < current_time < (ms + 30):  # 0 <-> 30
-                                # starttime_serial_send = time.time_ns()
-                                if ids != "ALL": # -> single receiver
+            if self.old_mixer_pos != mixer.music.get_pos():
+                print(f"Jitter: {mixer.music.get_pos() - self.old_mixer_pos}")
+                # starttime = time.time_ns()
+                # rows -> markers
+                index = 0
+                for r in list_m:
+                    ids = r[2]
+                    mode = int(r[3])
+                    picture = int(r[4])
+                    color = int(r[5])
+                    velocity = int(r[6])
+                    send_status = r[-1]
+                    saturation = 0
+                    if send_status == "False":
+                        # decrypt time
+                        ms = self.marker_list.get_marker_time_ms(r)
+                        # Not send marker if older than 50 ms -> somehow program gets interrupted sometimes for up to 24 ms
+                        current_time = mixer.music.get_pos() + self.music_startpoint_offset * 1000
+                        if ms < current_time < (ms + 50):  # 0 <-> 50
+                            # starttime_serial_send = time.time_ns()
+                            if ids != "ALL": # -> single receiver
+                                self.arduino.send(mode, ids, picture, color, saturation,
+                                                  self.brightnessSlider.value(),
+                                                  velocity)
+                                #time.sleep(0.0001)
+                            else:
+                                # Broadcast to all receivers
+                                for ids in receiver_ids:
                                     self.arduino.send(mode, ids, picture, color, saturation,
-                                                      self.brightnessSlider.value(),
-                                                      velocity)
-                                else:
-                                    # Broadcast to all receivers
-                                    for ids in receiver_ids:
-                                        self.arduino.send(mode, ids, picture, color, saturation,
-                                                          self.brightnessSlider.value(), velocity)
-                                # print("Duration for serial_send: " + str(
-                                # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
-                                # set marker sent_status "True"
-                                self.label_3.setText(
-                                    f"Channel: {ids}\n"
-                                    + f"Picture Nr.: {picture}\n"
-                                    + f"Color/Hue.: {color}\n"
-                                    + f"Saturation.: {saturation}\n"
-                                    + f"Brightness: {self.brightnessSlider.value()}\n"
-                                    + f"Velocity.: {velocity}"
-                                )
-                                r[-1] = "True"
-                                self.paint_status_in_table_green(index)  # used to be time problematic !
-                        index += 1
-                    old_mixer_pos = mixer.music.get_pos()
-                else:
-                    time.sleep(0.001)
-                # time.sleep(0.001)
-                # print(f"Duration for Thread send_marker: {(time.time_ns() - starttime) / 1000} us")
-                # print(starttime)
-                # print(time.time_ns() / 1000000 - self.time_stamp)
-                # self.time_stamp = time.time_ns() / 1000000
+                                                      self.brightnessSlider.value(), velocity)
+                                    #time.sleep(0.0001)
+                            # print("Duration for serial_send: " + str(
+                            # (time.time_ns() - starttime_serial_send) / 1000000) + " ms")
+                            # set marker sent_status "True"
+                            self.label_3.setText(
+                                f"Channel: {ids}\n"
+                                + f"Picture Nr.: {picture}\n"
+                                + f"Color/Hue.: {color}\n"
+                                + f"Saturation.: {saturation}\n"
+                                + f"Brightness: {self.brightnessSlider.value()}\n"
+                                + f"Velocity.: {velocity}"
+                            )
+                            r[-1] = "True"
+                            self.paint_status_in_table_green(index)  # used to be time problematic !
+                    index += 1
+                self.old_mixer_pos = mixer.music.get_pos()
+            else:
+                time.sleep(0.001)
+            # time.sleep(0.001)
+            # print(f"Duration for Thread send_marker: {(time.time_ns() - starttime) / 1000} us")
+            # print(starttime)
+            # print(time.time_ns() / 1000000 - self.time_stamp)
+            # self.time_stamp = time.time_ns() / 1000000
+
 
     def send_test_button_data(self):
         mode_t = 0
@@ -511,6 +538,19 @@ class MyGUI(QMainWindow):
             self.refresh_marker_table()
             self.current_index -= 1
 
+    def clock_loop(self):
+        next_call = time.perf_counter()
+
+        while True:
+            self.clock()  # ← Replace with your function
+            next_call += clock_thread_intervall
+            delay = next_call - time.perf_counter()
+            if delay > 0:
+                time.sleep(0.005)
+            else:
+                # We're late — skip sleep to catch up
+                print(f"⚠ Missed interval by {-delay * 1000:.2f} ms")
+
     def clock(self):
         self.passed = mixer.music.get_pos() / 1000.0 + self.music_startpoint_offset
         if self.passed < 0:
@@ -548,3 +588,4 @@ if __name__ == "__main__":
     main()
     # on exit
     # f.close()
+    ctypes.windll.winmm.timeEndPeriod(1)
