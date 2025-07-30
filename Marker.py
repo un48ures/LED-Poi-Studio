@@ -2,18 +2,6 @@ import os
 import os.path
 import sys
 
-
-config_name = 'projectFile.txt'
-
-# determine if application is a script file or frozen exe
-if getattr(sys, 'frozen', False):
-    application_path = os.path.dirname(sys.executable)
-elif __file__:
-    application_path = os.path.dirname(__file__)
-
-config_path = os.path.join(application_path, config_name)
-backup_file = config_path
-
 #dirname = os.path.dirname(__file__)
 #backup_file = dirname + '/markers_backup.txt'
 
@@ -38,7 +26,7 @@ class MarkerList:
             print(f"Project file couldn't be loaded: {e}")
 
     def reload_backup(self):
-        self.f = open(backup_file, "r")
+        self.f = open(self.backup_file, "r")
         str_input = self.f.read()
         backup_data = []
         [backup_data.append(b.split()) for b in str_input.splitlines()]
@@ -51,7 +39,7 @@ class MarkerList:
         self.update_backup_file()
 
     def update_backup_file(self):
-        self.f = open(backup_file, "w")
+        self.f = open(self.backup_file, "w")
         for x in self.List:
             for i in x:
                 self.f.write(str(i) + " ")

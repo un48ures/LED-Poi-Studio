@@ -69,7 +69,18 @@ p_flag = True
 cursor_thread_interval = 50 # in ms
 clock_thread_intervall = 25 # in ms
 send_marker_thread_intervall = 3 # in ms
-project_file_default_path = 'C:/Users/aac_n/Documents/work/LED-Poi-Studio/projectFile.txt'
+
+config_name = 'projectFile.txt'
+
+# determine if application is a script file or frozen exe
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+elif __file__:
+    application_path = os.path.dirname(__file__)
+
+config_path = os.path.join(application_path, config_name)
+project_file_default_path = config_path
+#project_file_default_path = 'C:/Users/aac_n/Documents/work/LED-Poi-Studio/projectFile.txt'
 
 class MyGUI(QMainWindow):
 
@@ -170,6 +181,7 @@ class MyGUI(QMainWindow):
         self.marker_list.set_backup_file_path(path_project_file[0])
         self.label_19.setText(path_project_file[0])
         self.create_dummy_lines_in_waveform()
+        self.refresh_marker_table()
 
     def open_audio_file(self, default):
         if not default:
