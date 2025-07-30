@@ -1,4 +1,5 @@
 import statistics
+import math
 
 jitter_values = []
 
@@ -13,3 +14,6 @@ def calc_jitter_info(current_jitter):
 def delete_jitter_values():
     jitter_values.clear()
     calc_jitter_info(0)
+
+def truncate(f, n):
+    return math.trunc(f * 10**n) / 10**n

@@ -22,6 +22,7 @@ import colorsys
 from pyqtgraph import InfiniteLine
 import math
 import ctypes
+from helper_functions import truncate
 
 # own files
 from dark_theme import dark_theme
@@ -344,7 +345,7 @@ class MyGUI(QMainWindow):
         # Info table with voltages and signal strength
         for r in range(len(receiver_ids)):
             item = self.tableWidget.item(r, 1)
-            item.setText(str(self.arduino.voltages[r]) + " V")
+            item.setText(str(truncate(self.arduino.voltages[r], 2)) + " V")
             item = self.tableWidget.item(r, 2)
             item.setText(str(self.arduino.signal_strength[r]) + " %")
 
@@ -425,8 +426,8 @@ class MyGUI(QMainWindow):
             if self.old_mixer_pos != mixer.music.get_pos():
                 #print(f"Jitter: {mixer.music.get_pos() - self.old_mixer_pos}")
                 avg, max = calc_jitter_info(mixer.music.get_pos() - self.old_mixer_pos)
-                self.label_14.setText(str(math.trunc(max * 100) / 100))
-                self.label_16.setText(str(math.trunc(avg * 100) / 100))
+                self.label_14.setText(str(truncate(max, 2)))
+                self.label_16.setText(str(truncate(avg, 2)))
                 # starttime = time.time_ns()
                 # rows -> markers
                 index = 0
@@ -637,11 +638,16 @@ def main():
 
     window.setWindowIcon(QIcon(resource_path('icon_LS_v2_128_128.ico')))
     window.animation()
-    app.exec()
-    stop_event.set()  # Signal the thread to stop
-    send_marker_thread.join()  # Wait for it to finish
-    clock_loop_thread.join()
-    update_cursor_thread.join()
+
+    # Run the GUI
+    try:
+        app.exec()
+    finally:
+        stop_event.set()  # Signal all loops to stop
+        send_marker_thread.join()
+        clock_loop_thread.join()
+        update_cursor_thread.join()
+        print("Threads stopped cleanly.")
 
 
 if __name__ == "__main__":
