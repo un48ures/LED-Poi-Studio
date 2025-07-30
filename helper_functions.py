@@ -8,7 +8,6 @@ def calc_jitter_info(current_jitter):
     jitter_values.append(abs(current_jitter))
     average = statistics.mean(jitter_values)
     maximum = max(jitter_values)
-    print(jitter_values)
     return average, maximum
 
 def delete_jitter_values():

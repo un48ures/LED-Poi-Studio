@@ -21,6 +21,7 @@ import pyqtgraph as pg
 import colorsys
 from pyqtgraph import InfiniteLine
 import math
+import ctypes
 
 # own files
 from dark_theme import dark_theme
@@ -29,9 +30,12 @@ from helper_functions import calc_jitter_info
 from helper_functions import delete_jitter_values
 
 # For higher precision on windows
-import ctypes
 ctypes.windll.winmm.timeBeginPeriod(1)  # Request 1 ms resolution
 
+# Create a stop event
+stop_event = threading.Event()
+
+# Treads
 
 def set_column_not_editable(table_widget, column_index):
     for row in range(table_widget.rowCount()):
@@ -64,6 +68,7 @@ p_flag = True
 cursor_thread_interval = 50 # in ms
 clock_thread_intervall = 25 # in ms
 send_marker_thread_intervall = 3 # in ms
+project_file_default_path = 'C:/Users/aac_n/Documents/work/LED-Poi-Studio/projectFile.txt'
 
 class MyGUI(QMainWindow):
 
@@ -96,7 +101,8 @@ class MyGUI(QMainWindow):
         self.sound_file = mp3_files[0]  # just load the first .mp3 file thats in the homedirectory
         self.arduino = ArduinoInterface(receiver_ids)
         self.arduino.find_ports()
-        self.marker_list = MarkerList()
+        self.marker_list = MarkerList(project_file_default_path)
+        self.label_19.setText(project_file_default_path)
         self.audio_converter = AudioConverter.AudioConverter()
         self.current_index = self.marker_list.get_highest_marker_number() + 1
         self.pushButton.clicked.connect(self.start_stop)
@@ -107,6 +113,7 @@ class MyGUI(QMainWindow):
         self.pushButton_5.clicked.connect(self.save_serial_config)
         self.pushButton_6.clicked.connect(self.open_audio_file)
         self.pushButton_7.clicked.connect(self.set_marker_off)
+        self.pushButton_9.clicked.connect(self.open_project_file)
         self.testButton.clicked.connect(self.send_test_button_data)
         self.offButton.clicked.connect(self.arduino.go_all_black)
         self.signalTestButton.clicked.connect(self.arduino.signal_strength_test_start)
@@ -119,9 +126,6 @@ class MyGUI(QMainWindow):
         self.time_stamp = 0
         self.table1.cellChanged.connect(self.on_cell_changed)
         self.old_mixer_pos = 0.0
-        threading.Thread(target=self.send_marker_loop, daemon=True).start()
-        threading.Thread(target=self.clock_loop, daemon=True).start()
-        threading.Thread(target=self.update_cursor_pos_loop, daemon=True).start()
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
@@ -159,10 +163,17 @@ class MyGUI(QMainWindow):
             # reset all markers to "False"
             self.marker_list.reset_send_status_all()
 
+    def open_project_file(self):
+        path_project_file = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Project files (*.txt)")
+        print(f"path_project_file: {path_project_file[0]}")
+        self.marker_list.set_backup_file_path(path_project_file[0])
+        self.label_19.setText(path_project_file[0])
+        self.create_dummy_lines_in_waveform()
+
     def open_audio_file(self, default):
         if not default:
-            file_info = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3 *.wav *.aac *.ogg)")
-            self.sound_file = file_info[0]
+            path_audio_file = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3 *.wav *.aac *.ogg)")
+            self.sound_file = path_audio_file[0]
 
         try:
             mixer.music.load(self.sound_file)
@@ -194,29 +205,36 @@ class MyGUI(QMainWindow):
         print(len(signal_red))
         wf_widget_plot_handle = self.waveform_widget.plot(time_red, signal_red,
                                                           pen=pg.mkPen(QColor(116, 173, 158), width=1))
+        # wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
         self.waveform_widget.setBackground(QColor(48, 74, 67))
         self.waveform_widget.showAxis('bottom')
-        # wf_widget_plot_handle.setDownsampling(auto=False, ds=5)
         self.cursor = InfiniteLine(pos=self.cursor_position, angle=90, pen='r')
         self.waveform_widget.addItem(self.cursor)
+        self.waveform_widget.plotItem.setMouseEnabled(y=False)  # zoom only in x
+        self.waveform_widget.addItem(self.label_cursor)
+        self.create_dummy_lines_in_waveform()
+        self.update_marker_plot_data()
 
+        # Debug info - plot duration
+        duration = int((time.time() - starttime) * 100) / 100
+        print(f"Plotting waveform finisehd after {duration} s.")
+
+    def create_dummy_lines_in_waveform(self):
         # Create vertical dummy lines for each marker
         for c in range(len(self.marker_list.List)):
             temp = InfiniteLine(pos=0, angle=90, pen='b')
             self.lst_markers_plt_h.append(temp)
             self.waveform_widget.addItem(temp)
 
-        self.waveform_widget.plotItem.setMouseEnabled(y=False)  # zoom only in x
-        duration = int((time.time() - starttime) * 100) / 100
-        self.update_marker_plot_data()
-        print(f"Plotting waveform finisehd after {duration} s.")
+        #Re-add the cursor label to keep it on top
+        self.waveform_widget.removeItem(self.label_cursor)
         self.waveform_widget.addItem(self.label_cursor)
 
     # Thread function with precision timer
     def update_cursor_pos_loop(self):
         next_call = time.perf_counter()
 
-        while True:
+        while not stop_event.is_set():
             self.update_cursor_pos()  # ← Replace with your function
             next_call += cursor_thread_interval
             delay = next_call - time.perf_counter()
@@ -228,7 +246,10 @@ class MyGUI(QMainWindow):
 
     def update_cursor_pos(self):
         if self.cursor is not None:
-            self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
+            try:
+                self.cursor_position = mixer.music.get_pos() / 1000 + self.music_startpoint_offset
+            except:
+                print("Mixer not initialized")
             self.cursor.setPos(self.cursor_position)
 
     def update_marker_plot_data(self):
@@ -388,7 +409,7 @@ class MyGUI(QMainWindow):
     def send_marker_loop(self):
         next_call = time.perf_counter()
 
-        while True:
+        while not stop_event.is_set():
             self.send_marker()  # ← Replace with your function
             next_call += send_marker_thread_intervall
             delay = next_call - time.perf_counter()
@@ -512,7 +533,12 @@ class MyGUI(QMainWindow):
         self.marker_list.add_marker(self.current_index, format_time_string(self.passed),
                                     self.receiverBox.currentText(), str(PICTURE_MODE),
                                     self.spinBox.value(), self.colorSlider.value(), self.velocitySlider.value(), False)
-        self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+
+        # self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        temp = InfiniteLine(pos=0, angle=90, pen='b')
+        self.lst_markers_plt_h.append(temp)
+        self.waveform_widget.addItem(temp)
+
         self.update_marker_plot_data()
         self.refresh_marker_table()
         self.current_index += 1
@@ -521,7 +547,11 @@ class MyGUI(QMainWindow):
         self.marker_list.add_marker(self.current_index, format_time_string(self.passed),
                                     self.receiverBox.currentText(), str(COLOR_MODE),
                                     0, self.colorSlider.value(), 0, False)
-        self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        #self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        temp = InfiniteLine(pos=0, angle=90, pen='b')
+        self.lst_markers_plt_h.append(temp)
+        self.waveform_widget.addItem(temp)
+
         self.update_marker_plot_data()
         self.refresh_marker_table()
         self.current_index += 1
@@ -530,7 +560,11 @@ class MyGUI(QMainWindow):
         self.marker_list.add_marker(self.current_index, format_time_string(self.passed),
                                     self.receiverBox.currentText(), PICTURE_MODE,
                                     0, 0, 0, False)
-        self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        #self.lst_markers_plt_h.append(self.waveform_widget.plot([0, 0], [0, 0], pen='b'))
+        temp = InfiniteLine(pos=0, angle=90, pen='b')
+        self.lst_markers_plt_h.append(temp)
+        self.waveform_widget.addItem(temp)
+
         self.update_marker_plot_data()
         self.refresh_marker_table()
         self.current_index += 1
@@ -540,7 +574,8 @@ class MyGUI(QMainWindow):
         # find nearest marker
         index = self.marker_list.delete_next_marker_to_time_ms(self.cursor_position * 1000)
         if index > -1:
-            self.lst_markers_plt_h[index].setData([0, 0], [0, 0], pen='b')  # delete marker from plot
+            invisible_pen = pg.mkPen((0, 0, 0, 0))  # transparent pen
+            self.lst_markers_plt_h[index].setPen(invisible_pen)  # delete marker from plot
             self.lst_markers_plt_h.pop(index)
             self.refresh_marker_table()
             self.current_index -= 1
@@ -548,7 +583,7 @@ class MyGUI(QMainWindow):
     def clock_loop(self):
         next_call = time.perf_counter()
 
-        while True:
+        while not stop_event.is_set():
             self.clock()  # ← Replace with your function
             next_call += clock_thread_intervall
             delay = next_call - time.perf_counter()
@@ -559,7 +594,10 @@ class MyGUI(QMainWindow):
                 print(f"⚠ Missed interval by {-delay * 1000:.2f} ms")
 
     def clock(self):
-        self.passed = mixer.music.get_pos() / 1000.0 + self.music_startpoint_offset
+        try:
+            self.passed = mixer.music.get_pos() / 1000.0 + self.music_startpoint_offset
+        except:
+            print("Couldn´t get mixer pos - error")
         if self.passed < 0:
             self.passed = 0
         self.label.setText(format_time_string(self.passed))
@@ -587,9 +625,24 @@ def main():
 
     # Create GUI
     window = MyGUI()
+
+    # Create Threads
+    send_marker_thread = threading.Thread(target=window.send_marker_loop, daemon=True)
+    clock_loop_thread = threading.Thread(target=window.clock_loop, daemon=True)
+    update_cursor_thread = threading.Thread(target=window.update_cursor_pos_loop, daemon=True)
+    # Start Threads
+    send_marker_thread.start()
+    clock_loop_thread.start()
+    update_cursor_thread.start()
+
     window.setWindowIcon(QIcon(resource_path('icon_LS_v2_128_128.ico')))
     window.animation()
     app.exec()
+    stop_event.set()  # Signal the thread to stop
+    send_marker_thread.join()  # Wait for it to finish
+    clock_loop_thread.join()
+    update_cursor_thread.join()
+
 
 if __name__ == "__main__":
     main()

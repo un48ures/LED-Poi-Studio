@@ -12,24 +12,30 @@ elif __file__:
     application_path = os.path.dirname(__file__)
 
 config_path = os.path.join(application_path, config_name)
-
-
 backup_file = config_path
-
 
 #dirname = os.path.dirname(__file__)
 #backup_file = dirname + '/markers_backup.txt'
 
 class MarkerList:
-    def __init__(self):
+    def __init__(self, backup_path):
+        self.backup_file = backup_path
         self.List = []
-        if os.path.exists(backup_file):
-            print("backup file found")
-            self.f = open(backup_file, "r")
+
+        if os.path.exists(self.backup_file):
+            print("Backup file found")
+            self.f = open(self.backup_file, "r")
+            self.reload_backup()
         else:
-            self.f = open(backup_file, "w")
-            print("no backup file found - new backup file created")
-        self.reload_backup()
+            print("No backup file found")
+
+    def set_backup_file_path(self, path):
+        self.backup_file = path
+        try:
+            self.f = open(self.backup_file, "r")
+            self.reload_backup()
+        except Exception as e:
+            print(f"Project file couldn't be loaded: {e}")
 
     def reload_backup(self):
         self.f = open(backup_file, "r")
