@@ -20,10 +20,13 @@ import AudioConverter
 import pyqtgraph as pg
 import colorsys
 from pyqtgraph import InfiniteLine
+import math
 
 # own files
 from dark_theme import dark_theme
 from time_functions import format_time_string
+from helper_functions import calc_jitter_info
+from helper_functions import delete_jitter_values
 
 # For higher precision on windows
 import ctypes
@@ -399,7 +402,10 @@ class MyGUI(QMainWindow):
         if self.checkBox.isChecked() and self.running:
             list_m = self.marker_list.get_marker_list()
             if self.old_mixer_pos != mixer.music.get_pos():
-                print(f"Jitter: {mixer.music.get_pos() - self.old_mixer_pos}")
+                #print(f"Jitter: {mixer.music.get_pos() - self.old_mixer_pos}")
+                avg, max = calc_jitter_info(mixer.music.get_pos() - self.old_mixer_pos)
+                self.label_14.setText(str(math.trunc(max * 100) / 100))
+                self.label_16.setText(str(math.trunc(avg * 100) / 100))
                 # starttime = time.time_ns()
                 # rows -> markers
                 index = 0
@@ -500,6 +506,7 @@ class MyGUI(QMainWindow):
             self.arduino.send(2, ids, 0, 0, 0, 0, 0)
         self.refresh_marker_table()
         self.table1.cellChanged.connect(self.on_cell_changed)
+        delete_jitter_values() # Clear values for jitter calc
 
     def set_marker_picture(self):
         self.marker_list.add_marker(self.current_index, format_time_string(self.passed),

@@ -72,7 +72,7 @@ class ArduinoInterface:
 
         self.receive()
         duration = (time.time_ns() - starttime_SP_write) / 1000000
-        print("Duration for serial port write and receive: " + str(duration) + " ms")
+        # print("Duration for serial port write and receive: " + str(duration) + " ms")
 
 
     def receive(self):
