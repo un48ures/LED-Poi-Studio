@@ -102,7 +102,7 @@ class MyGUI(QMainWindow):
         self.previous_passed = 0
         self.paused = False
         self.plotwidget = 0
-        self.label_cursor = pg.TextItem("Test", anchor=(0, 1),color='r', fill=pg.mkBrush(0, 0, 0, 150))
+        self.label_cursor = pg.TextItem("", anchor=(0, 1),color='r', fill=pg.mkBrush(0, 0, 0, 150))
         font = QFont("Arial", 16)  # 16 pt font size
         self.label_cursor.setFont(font)
         self.waveform_widget.setBackground(QColor(59, 59, 59))  # 0x3b3b3b
