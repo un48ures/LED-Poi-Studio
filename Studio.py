@@ -12,23 +12,23 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QIcon
 from PyQt6.QtGui import QFont
 import numpy as np
+from numpy.ma.core import empty
 from pygame import mixer
 import pygame
-from ArduinoInterface import ArduinoInterface
-from Marker import MarkerList
-import AudioConverter
+from src.ArduinoInterface import ArduinoInterface
+from src.Marker import MarkerList
+from src import AudioConverter
 import pyqtgraph as pg
 import colorsys
 from pyqtgraph import InfiniteLine
-import math
 import ctypes
-from helper_functions import truncate
+from src.helper_functions import truncate
 
 # own files
-from dark_theme import dark_theme
-from time_functions import format_time_string
-from helper_functions import calc_jitter_info
-from helper_functions import delete_jitter_values
+from src.dark_theme import dark_theme
+from src.time_functions import format_time_string
+from src.helper_functions import calc_jitter_info
+from src.helper_functions import delete_jitter_values
 
 # For higher precision on windows
 ctypes.windll.winmm.timeBeginPeriod(1)  # Request 1 ms resolution
@@ -59,7 +59,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-ui_file = resource_path('Studio_GUI_new.ui')
+ui_file = resource_path('GUI_files/Studio_GUI_new.ui')
 mp3_files = AudioConverter.find_mp3_files(os.path.dirname(__file__))
 REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
 receiver_ids = [1, 2, 3, 4, 5, 6]
@@ -114,7 +114,8 @@ class MyGUI(QMainWindow):
         self.arduino = ArduinoInterface(receiver_ids)
         self.arduino.find_ports()
         self.marker_list = MarkerList(project_file_default_path)
-        self.label_19.setText(project_file_default_path)
+        # self.label_19.setText(project_file_default_path)
+        self.label_19.setText("")
         self.audio_converter = AudioConverter.AudioConverter()
         self.current_index = self.marker_list.get_highest_marker_number() + 1
         self.pushButton.clicked.connect(self.start_stop)
@@ -188,16 +189,19 @@ class MyGUI(QMainWindow):
             path_audio_file = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Sound files (*.mp3 *.wav *.aac *.ogg)")
             self.sound_file = path_audio_file[0]
 
-        try:
-            mixer.music.load(self.sound_file)
-            self.label_4.setText(self.sound_file)
-            self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
-            self.waveform_widget.clear()
-            self.plot_waveform()
-        except pygame.error as e:
-            # If loading fails, handle the error
-            print(f"Failed to load sound file '{self.sound_file}': {e}")
-            return None
+        if self.sound_file is not empty:
+            print("Sound file: ")
+            print (self.sound_file)
+            try:
+                mixer.music.load(self.sound_file)
+                self.label_4.setText(self.sound_file)
+                self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
+                self.waveform_widget.clear()
+                self.plot_waveform()
+            except pygame.error as e:
+                # If loading fails, handle the error
+                print(f"Failed to load sound file '{self.sound_file}': {e}")
+                return None
 
     def reduce_samples(self, factor):
         #  throw out every 2nd sample
@@ -648,7 +652,7 @@ def main():
     clock_loop_thread.start()
     update_cursor_thread.start()
 
-    window.setWindowIcon(QIcon(resource_path('icon_LS_v2_128_128.ico')))
+    window.setWindowIcon(QIcon(resource_path('Icons/icon_LS_v2_128_128.ico')))
     window.animation()
 
     # Run the GUI
