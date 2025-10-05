@@ -169,6 +169,8 @@ class MyGUI(QMainWindow):
             mixer.music.play()
             mixer.music.set_pos(mouse_point.x())
             mixer.music.pause()
+            if self.running :
+                self.pushButton.setText("Resume")
             self.running = False
             self.paused = True
             self.music_startpoint_offset = mouse_point.x()
