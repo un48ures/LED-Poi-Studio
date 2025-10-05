@@ -16,11 +16,22 @@ class AudioConverter:
         sound.export('converted.wav', format="wav")
         with wave.open('converted.wav', 'r') as wav_file:
             signal = wav_file.readframes(-1)
-            # signal = np.fromstring(signal, int)
-            signal = np.frombuffer(signal, int)
+
+            width = wav_file.getsampwidth()  # Bytes pro Sample
+            if width == 1:
+                dtype = np.uint8
+            elif width == 2:
+                dtype = np.int16
+            elif width == 4:
+                dtype = np.int32
+            else:
+                raise ValueError("Unsupported sample width")
+
+            signal = np.frombuffer(signal, dtype=dtype)
+
             # Get time from indices
             fs = wav_file.getframerate()
-            time_x = np.linspace(0, len(signal) / fs, num=int(len(signal)))
+            time_x = np.linspace(0, len(signal) / 2 / fs, num=int(len(signal) / 2))
         print("Conversion of " + str(input_file) + " done!")
         duration = (int((time.time() - self.starttime) * 100)) / 100  # truncate to 2 decimals
         print("Conversion took: " + str(duration) + " s")
