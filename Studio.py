@@ -50,16 +50,16 @@ def set_column_not_editable(table_widget, column_index):
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller."""
     try:
-        # PyInstaller creates a temp folder and stores the temp path in _MEIPASS
+        # When running as a bundled exe, PyInstaller creates a temp folder and stores its path in _MEIPASS
         base_path = sys._MEIPASS
-    except AttributeError:
-        # If not running as a bundled executable
-        base_path = os.path.abspath(".")
+    except Exception:
+        # When running in IDE or as a normal script
+        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 
     return os.path.join(base_path, relative_path)
 
 
-ui_file = resource_path('GUI_files/Studio_GUI_new.ui')
+ui_file = resource_path('GUI_files/Studio_GUI_new_v2.ui')
 mp3_files = AudioConverter.find_mp3_files(os.path.dirname(__file__))
 REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
 receiver_ids = [1, 2, 3, 4, 5, 6]
