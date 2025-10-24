@@ -36,8 +36,6 @@ ctypes.windll.winmm.timeBeginPeriod(1)  # Request 1 ms resolution
 # Create a stop event
 stop_event = threading.Event()
 
-# Treads
-
 def set_column_not_editable(table_widget, column_index):
     for row in range(table_widget.rowCount()):
         item = table_widget.item(row, column_index)
@@ -185,6 +183,7 @@ class MyGUI(QMainWindow):
             self.label_19.setText(path_project_file[0])
             self.create_dummy_lines_in_waveform()
             self.refresh_marker_table()
+            self.current_index = self.marker_list.get_highest_marker_number() + 1
 
     def open_audio_file(self, default):
         if not default:
