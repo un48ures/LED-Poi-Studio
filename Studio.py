@@ -65,9 +65,8 @@ REDUCTION_FACTOR = 4  # Audio Sample reduction factor - plot
 receiver_ids = [1, 2, 3, 4, 5, 6]
 COLOR_MODE = 1
 PICTURE_MODE = 2
-p_flag = True
 cursor_thread_interval = 50 # in ms
-clock_thread_intervall = 25 # in ms
+clock_thread_intervall = 50 # in ms
 send_marker_thread_intervall = 3 # in ms
 
 config_name = 'projectFile.txt'
@@ -139,6 +138,7 @@ class MyGUI(QMainWindow):
         self.time_stamp = 0
         self.table1.cellChanged.connect(self.on_cell_changed)
         self.old_mixer_pos = 0.0
+        self.music_loaded = False
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
@@ -196,6 +196,7 @@ class MyGUI(QMainWindow):
             print (self.sound_file)
             try:
                 mixer.music.load(self.sound_file)
+                self.music_loaded = True
                 self.label_4.setText(self.sound_file)
                 self.audio_time, self.audio_signal = self.audio_converter.convert_mp3_to_array(self.sound_file)
                 self.waveform_widget.clear()
@@ -393,36 +394,38 @@ class MyGUI(QMainWindow):
         self.table1.setRowCount(len(self.marker_list.List) + 1)
 
     def start_stop(self):
-        # Stop
-        if self.running:
-            self.running = False
-            self.pushButton.setText("Resume")
-            mixer.music.pause()
-            print("Music pause")
-            self.paused = True
-            self.table1.cellChanged.connect(self.on_cell_changed)
-        # Start - Running
-        else:
-            print("Music play")
-            try:
-                self.table1.cellChanged.disconnect(self.on_cell_changed)
-
-            except:
-                print("Not yet connected")
-
-            self.running = True
-            self.stop_watch_start = time.perf_counter()
-            self.pushButton.setText("Stop")
-
-            # Play Music
-            if self.paused:
-                mixer.music.unpause()
-                self.paused = False
-                print("Music resume")
+        if self.music_loaded:
+            # Stop
+            if self.running:
+                self.running = False
+                self.pushButton.setText("Resume")
+                mixer.music.pause()
+                print("Music pause")
+                self.paused = True
+                self.table1.cellChanged.connect(self.on_cell_changed)
+            # Start - Running
             else:
-                # mixer.music.play(-1, self.music_startpoint)
-                mixer.music.play()
-                print("Music Play")
+                print("Music play")
+                try:
+                    self.table1.cellChanged.disconnect(self.on_cell_changed)
+
+                except:
+                    print("Not yet connected")
+
+                self.running = True
+                self.stop_watch_start = time.perf_counter()
+                self.pushButton.setText("Stop")
+
+                # Play Music
+                if self.paused:
+                    mixer.music.unpause()
+                    self.paused = False
+                    print("Music resume")
+                else:
+                    mixer.music.play()
+                    print("Music Play")
+        else:
+            print("No music loaded")
 
     # Thread function with precision timer
     def send_marker_loop(self):
