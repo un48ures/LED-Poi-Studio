@@ -14,11 +14,14 @@ class ArduinoInterface:
         self.ports_COMs = []
         self.serialPort = None
         self.signal_strength_test_active = False
+        self.find_ports()
 
     def find_ports(self):
         # Find connected Ports for Arduino
         ports = list(port_list.comports())
-
+        self.ports_COMs.clear()
+        self.ports_names.clear()
+        print("List of all available ports:")
         for p in ports:
             print(p)
             self.ports_COMs.append(p[0])

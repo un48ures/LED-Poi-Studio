@@ -79,7 +79,6 @@ elif __file__:
 
 config_path = os.path.join(application_path, config_name)
 project_file_default_path = config_path
-#project_file_default_path = 'C:/Users/aac_n/Documents/work/LED-Poi-Studio/projectFile.txt'
 
 class MyGUI(QMainWindow):
 
@@ -179,12 +178,13 @@ class MyGUI(QMainWindow):
             self.marker_list.reset_send_status_all()
 
     def open_project_file(self):
-        path_project_file = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Project files (*.txt)")
-        print(f"path_project_file: {path_project_file[0]}")
-        self.marker_list.set_backup_file_path(path_project_file[0])
-        self.label_19.setText(path_project_file[0])
-        self.create_dummy_lines_in_waveform()
-        self.refresh_marker_table()
+        if self.music_loaded:
+            path_project_file = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\', "Project files (*.txt)")
+            print(f"path_project_file: {path_project_file[0]}")
+            self.marker_list.set_backup_file_path(path_project_file[0])
+            self.label_19.setText(path_project_file[0])
+            self.create_dummy_lines_in_waveform()
+            self.refresh_marker_table()
 
     def open_audio_file(self, default):
         if not default:
@@ -625,7 +625,16 @@ class MyGUI(QMainWindow):
         self.label.setText(format_time_string(self.passed))
 
     def save_serial_config(self):
-        self.arduino.serialPort.setPort(self.arduino.ports_COMs[self.comboBox_2.currentIndex()])
+        self.arduino.find_ports()
+        self.comboBox_2.clear()
+        self.comboBox_2.addItems(self.arduino.ports_names)
+
+        if self.comboBox_2.currentIndex() is not None:
+            try:
+                self.arduino.serialPort.setPort(self.arduino.ports_COMs[self.comboBox_2.currentIndex()])
+            except Exception as e:
+                print(f"Couldn´t connect serial Port - error: {str(e)}")
+
         time.sleep(2.5)
         self.arduino.go_all_black()
 
