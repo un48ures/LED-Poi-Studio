@@ -390,9 +390,17 @@
                     <property name="editable">
                      <bool>false</bool>
                     </property>
+                    <property name="currentText">
+                     <string>ALL</string>
+                    </property>
                     <property name="insertPolicy">
                      <enum>QComboBox::InsertPolicy::InsertAtBottom</enum>
                     </property>
+                    <item>
+                     <property name="text">
+                      <string>ALL</string>
+                     </property>
+                    </item>
                     <item>
                      <property name="text">
                       <string>1</string>
@@ -421,11 +429,6 @@
                     <item>
                      <property name="text">
                       <string>6</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>ALL</string>
                      </property>
                     </item>
                    </widget>
