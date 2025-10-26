@@ -14,8 +14,6 @@ class ArduinoInterface:
         self.ports_COMs = []
         self.serialPort = None
         self.signal_strength_test_active = False
-        self.find_ports()
-        self.auto_connect()
 
     def find_ports(self):
         # Find connected Ports for Arduino
@@ -43,6 +41,9 @@ class ArduinoInterface:
                         port=self.ports_COMs[index], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
                         stopbits=serial.STOPBITS_ONE
                     )
+                    if self.serialPort.port is not None:
+                        print(f"Connected successfully to: {self.serialPort.port} ")
+                        break
                 except Exception as e:
                     print(f"Could not connect to Arduino Uno - {str(e)}")
             index = index + 1
@@ -56,8 +57,10 @@ class ArduinoInterface:
                 )
             except Exception as e:
                 print(f"Could not open the first port as default - {str(e)}")
+            return 0
         else:
             print(f"Connected successfully to: {self.serialPort.port} ")
+            return index
 
     def go_all_black(self):
         # Make all LEDs go black

@@ -109,8 +109,11 @@ class MyGUI(QMainWindow):
         self.sound_file = mp3_files[0]  # just load the first .mp3 file thats in the homedirectory
         self.arduino = ArduinoInterface(receiver_ids)
         self.arduino.find_ports()
+        self.comboBox_2.addItems(self.arduino.ports_names)
+        self.index_ac = self.arduino.auto_connect()
+        if self.index_ac:
+            self.comboBox_2.setCurrentIndex(self.index_ac)
         self.music_loaded = False
-        print(f"Project default path: {project_file_default_path}")
         self.marker_list = MarkerList(project_file_default_path)
         # self.label_19.setText(project_file_default_path)
         self.label_19.setText("")
@@ -130,7 +133,6 @@ class MyGUI(QMainWindow):
         self.offButton.clicked.connect(self.arduino.go_all_black)
         self.signalTestButton.clicked.connect(self.arduino.signal_strength_test_start)
         self.exit_Button.clicked.connect(self.exit)
-        self.comboBox_2.addItems(self.arduino.ports_names)
         self.refresh_marker_table()
         self.open_audio_file(True)  # 1 = default file (audio_file_path)
         self.create_info_table()
