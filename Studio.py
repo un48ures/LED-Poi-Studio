@@ -109,6 +109,8 @@ class MyGUI(QMainWindow):
         self.sound_file = mp3_files[0]  # just load the first .mp3 file thats in the homedirectory
         self.arduino = ArduinoInterface(receiver_ids)
         self.arduino.find_ports()
+        self.music_loaded = False
+        print(f"Project default path: {project_file_default_path}")
         self.marker_list = MarkerList(project_file_default_path)
         # self.label_19.setText(project_file_default_path)
         self.label_19.setText("")
@@ -119,7 +121,8 @@ class MyGUI(QMainWindow):
         self.pushButton_3.clicked.connect(self.set_marker_picture)
         self.pushButton_8.clicked.connect(self.set_marker_color)
         self.pushButton_4.clicked.connect(self.delete_marker)
-        self.pushButton_5.clicked.connect(self.save_serial_config)
+        self.pushButton_5.clicked.connect(self.connect_to_serial_port)
+        self.pushButton_10.clicked.connect(self.refresh_port_list)
         self.pushButton_6.clicked.connect(self.open_audio_file)
         self.pushButton_7.clicked.connect(self.set_marker_off)
         self.pushButton_9.clicked.connect(self.open_project_file)
@@ -135,7 +138,7 @@ class MyGUI(QMainWindow):
         self.time_stamp = 0
         self.table1.cellChanged.connect(self.on_cell_changed)
         self.old_mixer_pos = 0.0
-        self.music_loaded = False
+
 
     def keyPressEvent(self, event):
         # Check if the pressed key is the spacebar
@@ -623,16 +626,22 @@ class MyGUI(QMainWindow):
             self.passed = 0
         self.label.setText(format_time_string(self.passed))
 
-    def save_serial_config(self):
+    def refresh_port_list(self):
         self.arduino.find_ports()
         self.comboBox_2.clear()
         self.comboBox_2.addItems(self.arduino.ports_names)
+
+    def connect_to_serial_port(self):
+        print(f"combobox current index: {self.comboBox_2.currentIndex()}")
 
         if self.comboBox_2.currentIndex() is not None:
             try:
                 self.arduino.serialPort.setPort(self.arduino.ports_COMs[self.comboBox_2.currentIndex()])
             except Exception as e:
                 print(f"Couldn´t connect serial Port - error: {str(e)}")
+
+            if self.arduino.serialPort.port is not None:
+                print(f"Connected serial port to: {self.arduino.ports_COMs[self.comboBox_2.currentIndex()]}")
 
         time.sleep(2.5)
         self.arduino.go_all_black()

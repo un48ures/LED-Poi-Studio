@@ -6,27 +6,27 @@ import sys
 #backup_file = dirname + '/markers_backup.txt'
 
 class MarkerList:
-    def __init__(self, backup_path):
-        self.backup_file = backup_path
+    def __init__(self, project_file_path):
+        self.project_file = project_file_path
         self.List = []
 
-        if os.path.exists(self.backup_file):
-            print("Backup file found")
-            self.f = open(self.backup_file, "r")
-            self.reload_backup()
+        if os.path.exists(self.project_file):
+            print("Project file found")
+            self.f = open(self.project_file, "r")
+            self.reload_project_file()
         else:
-            print("No backup file found")
+            print("No project file found")
 
     def set_backup_file_path(self, path):
-        self.backup_file = path
+        self.project_file = path
         try:
-            self.f = open(self.backup_file, "r")
-            self.reload_backup()
+            self.f = open(self.project_file, "r")
+            self.reload_project_file()
         except Exception as e:
             print(f"Project file couldn't be loaded: {e}")
 
-    def reload_backup(self):
-        self.f = open(self.backup_file, "r")
+    def reload_project_file(self):
+        self.f = open(self.project_file, "r")
         str_input = self.f.read()
         backup_data = []
         [backup_data.append(b.split()) for b in str_input.splitlines()]
@@ -39,7 +39,7 @@ class MarkerList:
         self.update_backup_file()
 
     def update_backup_file(self):
-        self.f = open(self.backup_file, "w")
+        self.f = open(self.project_file, "w")
         for x in self.List:
             for i in x:
                 self.f.write(str(i) + " ")
@@ -105,9 +105,6 @@ class MarkerList:
         return target_index
 
     def find_before_after_to_time(self, time_ms):
-        index = 0
-        before = 0
-        after = 0
         if len(self.List) > 0:
             for m in self.List:
                 pass

@@ -15,6 +15,7 @@ class ArduinoInterface:
         self.serialPort = None
         self.signal_strength_test_active = False
         self.find_ports()
+        self.auto_connect()
 
     def find_ports(self):
         # Find connected Ports for Arduino
@@ -27,26 +28,36 @@ class ArduinoInterface:
             self.ports_COMs.append(p[0])
             self.ports_names.append(p[1])
 
+    def auto_connect(self):
         index = 0
+        print(f"ports_COMs[0]: {self.ports_COMs[0]}")
+        print(f"ports_COMs[1]: {self.ports_COMs[1]}")
+        print(f"ports_names[0]: {self.ports_names[0]}")
+        print(f"ports_names[1]: {self.ports_names[1]}")
         for p in self.ports_names:
-            index = index + 1
+            print(f"p in ports_names: {p} - current index: {index}")
             if "arduino uno" in p.lower():
+                print("Found arduino uno in p.lower")
                 try:
                     self.serialPort = serial.Serial(
-                        port=self.ports_COMs[index - 1], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
+                        port=self.ports_COMs[index], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
                         stopbits=serial.STOPBITS_ONE
                     )
-                except:
-                    print("Could not connect to Arduino Uno")
+                except Exception as e:
+                    print(f"Could not connect to Arduino Uno - {str(e)}")
+            index = index + 1
 
         if self.serialPort is None:  # open just the first port
             try:
+                print("Trying to connect first port because serialPort is None")
                 self.serialPort = serial.Serial(
                     port=self.ports_COMs[0], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
                     stopbits=serial.STOPBITS_ONE
                 )
-            except:
-                print("Could not open the first port as default")
+            except Exception as e:
+                print(f"Could not open the first port as default - {str(e)}")
+        else:
+            print(f"Connected successfully to: {self.serialPort.port} ")
 
     def go_all_black(self):
         # Make all LEDs go black
@@ -76,7 +87,6 @@ class ArduinoInterface:
         self.receive()
         duration = (time.time_ns() - starttime_SP_write) / 1000000
         # print("Duration for serial port write and receive: " + str(duration) + " ms")
-
 
     def receive(self):
         if self.serialPort is None:
