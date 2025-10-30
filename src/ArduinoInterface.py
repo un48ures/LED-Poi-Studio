@@ -28,10 +28,6 @@ class ArduinoInterface:
 
     def auto_connect(self):
         index = 0
-        print(f"ports_COMs[0]: {self.ports_COMs[0]}")
-        print(f"ports_COMs[1]: {self.ports_COMs[1]}")
-        print(f"ports_names[0]: {self.ports_names[0]}")
-        print(f"ports_names[1]: {self.ports_names[1]}")
         for p in self.ports_names:
             print(f"p in ports_names: {p} - current index: {index}")
             if "arduino uno" in p.lower():
