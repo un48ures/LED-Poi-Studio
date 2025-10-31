@@ -23,6 +23,7 @@ import colorsys
 from pyqtgraph import InfiniteLine
 import ctypes
 from src.helper_functions import truncate
+import serial
 
 # own files
 from src.dark_theme import dark_theme
@@ -289,7 +290,7 @@ class MyGUI(QMainWindow):
 
                     # Find/Draw closest marker in orange
                     if index == closest_marker:  # mark the closest marker orange
-                        self.label_cursor.setText(str(index)) # write index number as string in the plot
+                        self.label_cursor.setText(str(index+1)) # write index number as string in the plot
                         self.label_cursor.setPos(m_pos, 0)
                         self.lst_markers_plt_h[index].setPen('y', width = 3)
                         # There is a problem, that the closest marker in yellow is overdrawn in blue
@@ -636,15 +637,21 @@ class MyGUI(QMainWindow):
     def connect_to_serial_port(self):
         print(f"combobox current index: {self.comboBox_2.currentIndex()}")
 
-        if self.comboBox_2.currentIndex() is not None:
+        if self.comboBox_2.currentIndex() is not None and self.arduino.serialPort is not None:
             try:
                 self.arduino.serialPort.setPort(self.arduino.ports_COMs[self.comboBox_2.currentIndex()])
             except Exception as e:
                 print(f"Couldn´t connect serial Port - error: {str(e)}")
 
-            if self.arduino.serialPort.port is not None:
-                print(f"Connected serial port to: {self.arduino.ports_COMs[self.comboBox_2.currentIndex()]}")
-
+            if self.arduino.serialPort is not None:
+                if self.arduino.serialPort.port is not None:
+                    print(f"Connected serial port to: {self.arduino.ports_COMs[self.comboBox_2.currentIndex()]}")
+        else:
+            if self.comboBox_2.currentIndex() is not None:
+                self.arduino.serialPort = serial.Serial(
+                    port=self.arduino.ports_COMs[self.comboBox_2.currentIndex()], baudrate=115200, bytesize=8, write_timeout=1, timeout=2,
+                    stopbits=serial.STOPBITS_ONE
+                )
         time.sleep(2.5)
         self.arduino.go_all_black()
 
