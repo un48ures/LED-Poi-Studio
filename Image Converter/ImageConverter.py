@@ -4,7 +4,12 @@ import binascii
 from os import listdir
 from os.path import isfile, join
 
-mypath = './newGraphics_8_bit_bmp'
+# Create picture of 62 px height and 61 px width (or more)
+# Export as 8bit bmp
+# Convert via this script
+# Import c-array code into Receiver pic_array.h
+
+mypath = '../newGraphics_8_bit_bmp'
 onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
 
 for f in onlyfiles:
